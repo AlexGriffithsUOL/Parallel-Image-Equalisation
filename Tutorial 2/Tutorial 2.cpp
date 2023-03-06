@@ -1,10 +1,6 @@
-#include <iostream>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include "Utils.h"
-#include "CImg.h"
-#include <stdexcept>
+#include "LibraryImport.h"
+#include "MappingOperationsSerial.h"
+#include "Printing.h"
 
 using namespace cimg_library;
 
@@ -54,41 +50,6 @@ int getBinsize(int width, int height) { //I can't believe this is all to come up
 
 	cout << "Bin size is: " << binSize << "\n";
 	return binSize;
-}
-
-int HSVtoRGB(float H, float S, float V) {
-	if (H > 360 || H < 0 || S>100 || S < 0 || V>100 || V < 0) {
-		cout << "The givem HSV values are not in valid range" << endl;
-		return -1;
-	}
-	float s = S / 100;
-	float v = V / 100;
-	float C = s * v;
-	float X = C * (1 - abs(fmod(H / 60.0, 2) - 1));
-	float m = v - C;
-	float r, g, b;
-	if (H >= 0 && H < 60) {
-		r = C, g = X, b = 0;
-	}
-	else if (H >= 60 && H < 120) {
-		r = X, g = C, b = 0;
-	}
-	else if (H >= 120 && H < 180) {
-		r = 0, g = C, b = X;
-	}
-	else if (H >= 180 && H < 240) {
-		r = 0, g = X, b = C;
-	}
-	else if (H >= 240 && H < 300) {
-		r = X, g = 0, b = C;
-	}
-	else {
-		r = C, g = 0, b = X;
-	}
-	int R = (r + m) * 255;
-	int G = (g + m) * 255;
-	int B = (b + m) * 255;
-	return R;
 }
 
 void print_help() {
@@ -149,68 +110,109 @@ int main(int argc, char** argv) {
 			throw err;
 		}
 
+		//SECOND START OF USER CODE
+		//Start
+		//Creating histogram and normalising it
+		std::map<int, int> tempMap;
+
+		int totalSize = image_input.width() * image_input.height(); //change to output_image below or image_input above
+		cout << "Total size: " << totalSize << "\n";
+		cout << "Image size: " << image_input.size() << "\n"; //change to output_image below or image_input above
+
+		//Vectorise data
+		std::vector<int> vectorisedImage = vectoriseData(image_input); //change to output_image below or image_input above
+
+		//Create map
+		tempMap = createHistogram(vectorisedImage);
+		print_map(tempMap);
+
+		//Cumulative Histogram
+		tempMap = createCumulativeHistogram(tempMap);
+
+		//Normalise
+		map<int, float> floatMap;
+		floatMap = createFloatHistogram(tempMap, totalSize);
+
+		//Turn into corresponding RGB values
+		tempMap = createRGBMap(floatMap);
+
+		vector<int>tempArr = vectoriseData(tempMap);
+		//End
+		//SECOND END OF USER CODE
+
+
+
+
+
+
+
+
+
+
 		//Part 4 - device operations
 
 		//device - buffers
 		cl::Buffer dev_image_input(context, CL_MEM_READ_ONLY, image_input.size());
-		cl::Buffer dev_image_output(context, CL_MEM_READ_WRITE, image_input.size());
+		cl::Buffer dev_image_output(context, CL_MEM_READ_WRITE, image_input.size()); //should be the same as input image
+		//comment out if not working
+		cl::Buffer lookUpTable(context, CL_MEM_READ_ONLY, tempArr.size()*sizeof(int));//
 
 		//4.1 Copy images to device memory
 		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 
+		//comment out if not working
+		queue.enqueueWriteBuffer(lookUpTable, CL_TRUE, 0, tempArr.size()*sizeof(int), &tempArr[0]);// ampersand at the end bit points to the memory location of the tempArray element 0,
+		/* buffer
+		   CL_TRUE preserves the location in memory
+		   0 is the offset
+		   tempArr.size()*sizeof(int) is the number of bytes to write in or expect
+		   &tempArr[0] refers a pointer to the first element of the tempArr so it knows where to read from */
+		
+
 		//4.2 Setup and execute the kernel (i.e. device code)
-		cl::Kernel kernel = cl::Kernel(program, "identity");
+		cl::Kernel kernel = cl::Kernel(program, "histogramEqualisation");
 		kernel.setArg(0, dev_image_input);
 		kernel.setArg(1, dev_image_output);
+		//comment out if not working
+		kernel.setArg(2, lookUpTable); //Sets up the argument corresponding to the kernel function in my_kernels.cl
 
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange); //Gets the range in the devices for the kernels
 
 		vector<unsigned char> output_buffer(image_input.size());
+
 		//4.3 Copy the result from device to host
-		queue.enqueueReadBuffer(dev_image_output, CL_TRUE, 0, output_buffer.size(), &output_buffer.data()[0]);
+		queue.enqueueReadBuffer(dev_image_output, CL_TRUE, 0, output_buffer.size(), &output_buffer.data()[0]); //Reads the output buffer back from the device
 
 		CImg<unsigned char> output_image(output_buffer.data(), image_input.width(), image_input.height(), image_input.depth(), image_input.spectrum());
-		//CImgDisplay disp_output(output_image, "output");
+		CImgDisplay disp_output(output_image, "Kernel output");
 
 
-		//Creating histogram and normalising it
-		std::vector<int> line = {};
-		std::map<int, int> tempMap;
 
-		int totalSize = output_image.width() * output_image.height();
-		cout << "Total size: " << totalSize << "\n";
-		cout << "Image size: " << output_image.size() << "\n";
+		//Custom User kernel
+		vector<int>histoVector(255);
+		int ar(255);
+		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, histoVector.size());
+		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 
-		for (int i = 0; i < totalSize; ++i) {
-			line.push_back(int(output_image._data[i]));
-		}
+		cl::Kernel histogramKernel = cl::Kernel(program, "countToHistogram");
+		histogramKernel.setArg(0, dev_image_input);
+		histogramKernel.setArg(1, histogramBuffer);
 
-		for (int i = 0; i < line.size(); ++i) {
-			++tempMap[line[i]];
-		}
+		queue.enqueueNDRangeKernel(histogramKernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
 
-		int total = 0;
-		for (int i = 0; i < tempMap.size(); ++i) {
-			tempMap[i] = tempMap[i] + total;
-			total = tempMap[i];
-		}
+		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histoVector.size(), &ar);
 
-		std::map<int, float> floatMap;
-		for (int i = 0; i < tempMap.size(); ++i) {
-			floatMap[i] = HSVtoRGB(0, 0, float(tempMap[i]) / float(output_image.width() * output_image.height()) * 100);//*255.0;
-		}
-		print_map(floatMap);
+		print_vector(histoVector);
 
-		CImg<unsigned char> newImg(1024, 683, 1, 1, 0);
-		cout << newImg.size() << "\n";
-		for (int i = 0; i < newImg.size(); ++i) {
-			int key = output_image._data[i];
-			newImg._data[i] = floatMap[key];
-		}
-		newImg.save("allBlackTest.pgm");
-		CImgDisplay local(newImg, "Woi");
+		//ORIGINAL START OF USER CODE
+	
+		//ORIGINAL END OF USER CODE
 
+
+		//CImg<unsigned char> newer = historamEqualiseSerial(tempMap, image_input);
+		//CImgDisplay oioi(newer, "Serial output");
 		int huh = 0;
+		cout << "End of program - any key to close ";
 		cin >> huh;
 	}
 	catch (const cl::Error& err) {
@@ -220,4 +222,7 @@ int main(int argc, char** argv) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
 	return 0;
-}
+} 
+
+
+////SORT OUT BUFFER

@@ -4,6 +4,23 @@
     <ClCompile Include="Tutorial 2.cpp" />
     <ClCompile Include="MapTest.cpp" />
     <ClCompile Include="TestingGround.cpp" />
+    <ClCompile Include="Printing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Printing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MappingOperationsSerial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Printing.cpp" />
+    <ClCompile Include="ConversionSerial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ReadingWriting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Printing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="kernels">
@@ -12,9 +29,18 @@
     <Filter Include="include">
       <UniqueIdentifier>{533d906d-5db8-4839-8b76-d22542cb0f52}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{02c91cf1-f701-45c8-866a-23a12b7106bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{07b6a13d-54fb-4fb1-9f73-f281b9b3bb8e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="kernels\my_kernels.cl">
+      <Filter>kernels</Filter>
+    </None>
+    <None Include="histogramKernels.cl">
       <Filter>kernels</Filter>
     </None>
   </ItemGroup>
@@ -24,6 +50,21 @@
     </ClInclude>
     <ClInclude Include="..\include\CImg.h">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="LibraryImport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MappingOperationsSerial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Printing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConversionSerial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ReadingWriting.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

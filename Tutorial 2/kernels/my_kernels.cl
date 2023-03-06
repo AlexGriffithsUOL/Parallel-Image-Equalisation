@@ -84,3 +84,20 @@ kernel void convolutionND(global const uchar* A, global uchar* B, constant float
 
 	B[id] = (uchar)result;
 }
+
+kernel void histogramEqualisation(global const uchar* A, global uchar* B, global int* correspondingArr) {
+	int id = get_global_id(0);
+	B[id] = correspondingArr[A[id]];
+
+}
+
+
+
+kernel void countToHistogram(global const uchar* A, global int* arr) {
+	int id = get_global_id(0);
+	int key = A[id];
+	++arr[key];
+	if (A[id] == 150) {
+		printf("%d is the bludclart 0th count\n", arr[150]);
+	}
+}
