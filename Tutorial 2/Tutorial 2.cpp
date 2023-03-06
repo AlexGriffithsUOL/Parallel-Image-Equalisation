@@ -101,20 +101,6 @@ void print_help() {
 	std::cerr << "  -h : print this message" << std::endl;
 }
 
-void print_map(std::map<int, int> const& m) {
-	cout << "\n NEW MAP ######################\n";
-	for (auto const& pair : m) {
-		cout << "|" << pair.first << "| " << pair.second << "\n";
-	}
-}
-
-void print_map(std::map<int, float > const& m) {
-	cout << "\n NEW MAP ######################\n";
-	for (auto const& pair : m) {
-		cout << "|" << pair.first << "| " << pair.second << "\n";
-	}
-}
-
 int main(int argc, char** argv) {
 	int platform_id = 0;
 	int device_id = 0;
