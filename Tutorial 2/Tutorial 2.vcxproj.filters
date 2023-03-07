@@ -21,6 +21,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Printing.cpp" />
+    <ClCompile Include="Printing.cpp" />
+    <ClCompile Include="Printing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="kernels">

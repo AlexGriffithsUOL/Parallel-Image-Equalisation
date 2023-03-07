@@ -2,6 +2,8 @@
 #include "MappingOperationsSerial.h"
 #include "Printing.h"
 
+#define MAX_SOURCE_SIZE (0x100000)
+
 using namespace cimg_library;
 
 int getBinsize(int width, int height) { //I can't believe this is all to come up with even bins :)
@@ -110,35 +112,14 @@ int main(int argc, char** argv) {
 			throw err;
 		}
 
-		//SECOND START OF USER CODE
 		//Start
-		//Creating histogram and normalising it
-		std::map<int, int> tempMap;
-
 		int totalSize = image_input.width() * image_input.height(); //change to output_image below or image_input above
 		cout << "Total size: " << totalSize << "\n";
 		cout << "Image size: " << image_input.size() << "\n"; //change to output_image below or image_input above
 
-		//Vectorise data
-		std::vector<int> vectorisedImage = vectoriseData(image_input); //change to output_image below or image_input above
 
-		//Create map
-		tempMap = createHistogram(vectorisedImage);
-		print_map(tempMap);
-
-		//Cumulative Histogram
-		tempMap = createCumulativeHistogram(tempMap);
-
-		//Normalise
-		map<int, float> floatMap;
-		floatMap = createFloatHistogram(tempMap, totalSize);
-
-		//Turn into corresponding RGB values
-		tempMap = createRGBMap(floatMap);
-
-		vector<int>tempArr = vectoriseData(tempMap);
+		std::vector<int> tempArr = returnRGBMap(image_input);
 		//End
-		//SECOND END OF USER CODE
 
 
 
@@ -149,71 +130,150 @@ int main(int argc, char** argv) {
 
 
 
-		//Part 4 - device operations
 
-		//device - buffers
-		cl::Buffer dev_image_input(context, CL_MEM_READ_ONLY, image_input.size());
-		cl::Buffer dev_image_output(context, CL_MEM_READ_WRITE, image_input.size()); //should be the same as input image
-		//comment out if not working
-		cl::Buffer lookUpTable(context, CL_MEM_READ_ONLY, tempArr.size()*sizeof(int));//
 
-		//4.1 Copy images to device memory
-		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
 
-		//comment out if not working
-		queue.enqueueWriteBuffer(lookUpTable, CL_TRUE, 0, tempArr.size()*sizeof(int), &tempArr[0]);// ampersand at the end bit points to the memory location of the tempArray element 0,
-		/* buffer
-		   CL_TRUE preserves the location in memory
-		   0 is the offset
-		   tempArr.size()*sizeof(int) is the number of bytes to write in or expect
-		   &tempArr[0] refers a pointer to the first element of the tempArr so it knows where to read from */
+
+
+
+
+
+
+
+
+
+
+
+
+
+		//Custom User kernel
+		const int LIST_SIZE = 256; //List size becomes image length
+		int* A = (int*)malloc(sizeof(int) * image_input.size());
+		//int* B = (int*)malloc(sizeof(int) * LIST_SIZE);
+		int* B = (int*)malloc(sizeof(int) * LIST_SIZE);
+		for (int i = 0; i < image_input.size(); i++) { //Remove this 
+			A[i] = image_input._data[i];
+		} //remove this
+
+		// Load the kernel source code into the array source_str
+		FILE* fp;
+		char* source_str;
+		size_t source_size;
+
+		fp = fopen("kernels/my_kernels.cl", "r");
+		if (!fp) {
+			fprintf(stderr, "Failed to load kernel.\n");
+			exit(1);
+		}
+		source_str = (char*)malloc(MAX_SOURCE_SIZE);
+		source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
+		fclose(fp);
+
+
+
+		// Create an OpenCL context
+		cl::Context context2 = GetContext(platform_id, device_id);
+
+		// Create a command queue
+		cl::CommandQueue queue2(context2);
+
+		// Create memory buffers on the device for each vector 
+		cl::Buffer a_mem_obj(context2, CL_MEM_READ_ONLY, image_input.size() * sizeof(int)); //
+		cl::Buffer b_mem_obj(context2, CL_MEM_READ_ONLY, LIST_SIZE * sizeof(int));
+		cl::Buffer c_mem_obj(context2, CL_MEM_WRITE_ONLY, LIST_SIZE * sizeof(int));
+
+
+		// Copy the lists A and B to their respective memory buffers
+		queue2.enqueueWriteBuffer(a_mem_obj, CL_TRUE ,0, image_input.size() * sizeof(int), A); //
+		cout << image_input.size() * sizeof(int) << "<- size of A_mem_obj \n";
+		queue2.enqueueWriteBuffer(b_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), B);
+		cout << LIST_SIZE * sizeof(int) << "<- size of B_mem_obj \n";
+		// Create a program from the kernel source
+		cl::Program::Sources sources2;
+		AddSources(sources2, "kernels/my_kernels.cl");
+		cl::Program program2(context2, sources2);
+
+		// Build the program
+		program2.build();
+
+		// Create the OpenCL kernel
+		cl::Kernel kernel2 = cl::Kernel(program2, "translateByLookup");
+
+		// Set the arguments of the kernel
+		kernel2.setArg(0, a_mem_obj);
+		kernel2.setArg(1, b_mem_obj);
+		kernel2.setArg(2, c_mem_obj);
+
+		// Execute the OpenCL kernel on the list;
+		size_t global_item_size = image_input.size(); // Process the entire lists
+		size_t local_item_size = 32; // Divide work items into groups of 64
+
+		queue2.enqueueNDRangeKernel(kernel2, cl::NullRange, cl::NDRange(global_item_size), cl::NDRange( local_item_size)); //Gets the range in the devices for the kernels
+
+		// Read the memory buffer C on the device to the local variable C
+		int* C = (int*)malloc(sizeof(int) * LIST_SIZE);
+		queue2.enqueueReadBuffer(c_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), &C[0]); //Reads the output buffer back from the device
+
+
+		//Translate C to vector
+		vector<int>newTempArr;
+		int total = 0;
+		for (int i = 0; i < LIST_SIZE; i++) {
+			printf("%d - %d\n", i, C[i]);
+			total += C[i];
+			newTempArr.push_back(C[i]);//Add to array
+		}
+
+		//Clean up
+		queue2.flush();
+		queue2.finish();
+		free(A);
+		free(B);
+		//free(C);
+
+		
+		//Metric for total C size
+		cout << "Total of C " << total << "\n";
 		
 
-		//4.2 Setup and execute the kernel (i.e. device code)
+
+		//Equalisation in serial for comparison
+		CImg<unsigned char> newer = historamEqualiseSerial(tempArr, image_input);
+		CImgDisplay oioi(newer, "Serial output");
+
+
+
+
+		//Contrast
+		cl::Buffer dev_image_input(context, CL_MEM_READ_ONLY, image_input.size());
+		cl::Buffer dev_image_output(context, CL_MEM_READ_WRITE, image_input.size()); //should be the same as input image
+		cl::Buffer lookUpTable(context, CL_MEM_READ_ONLY, newTempArr.size() * sizeof(int));
+
+		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
+		queue.enqueueWriteBuffer(lookUpTable, CL_TRUE, 0, newTempArr.size() * sizeof(int), &newTempArr[0]);// ampersand at the end bit points to the memory location of the tempArray element 0,
+
 		cl::Kernel kernel = cl::Kernel(program, "histogramEqualisation");
 		kernel.setArg(0, dev_image_input);
 		kernel.setArg(1, dev_image_output);
-		//comment out if not working
 		kernel.setArg(2, lookUpTable); //Sets up the argument corresponding to the kernel function in my_kernels.cl
 
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange); //Gets the range in the devices for the kernels
 
 		vector<unsigned char> output_buffer(image_input.size());
-
-		//4.3 Copy the result from device to host
 		queue.enqueueReadBuffer(dev_image_output, CL_TRUE, 0, output_buffer.size(), &output_buffer.data()[0]); //Reads the output buffer back from the device
 
 		CImg<unsigned char> output_image(output_buffer.data(), image_input.width(), image_input.height(), image_input.depth(), image_input.spectrum());
 		CImgDisplay disp_output(output_image, "Kernel output");
 
+		queue.flush();
+		queue.finish();
 
 
-		//Custom User kernel
-		vector<int>histoVector(255);
-		int ar(255);
-		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, histoVector.size());
-		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
-
-		cl::Kernel histogramKernel = cl::Kernel(program, "countToHistogram");
-		histogramKernel.setArg(0, dev_image_input);
-		histogramKernel.setArg(1, histogramBuffer);
-
-		queue.enqueueNDRangeKernel(histogramKernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
-
-		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histoVector.size(), &ar);
-
-		print_vector(histoVector);
-
-		//ORIGINAL START OF USER CODE
-	
-		//ORIGINAL END OF USER CODE
 
 
-		//CImg<unsigned char> newer = historamEqualiseSerial(tempMap, image_input);
-		//CImgDisplay oioi(newer, "Serial output");
-		int huh = 0;
-		cout << "End of program - any key to close ";
+		int huh;
 		cin >> huh;
+		return 0;
 	}
 	catch (const cl::Error& err) {
 		std::cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << std::endl;
@@ -222,7 +282,7 @@ int main(int argc, char** argv) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
 	return 0;
-} 
+}
 
 
 ////SORT OUT BUFFER

@@ -39,7 +39,6 @@ std::map<int, int> createCumulativeHistogram(std::map<int, int> assignedMap) {
 	return assignedMap;
 }
 
-
 //Turn into float Map
 std::map<int, float> createFloatHistogram(std::map<int, int> assignedMap, int imageSize) {
 	std::map<int, float> floatMap;
@@ -48,7 +47,6 @@ std::map<int, float> createFloatHistogram(std::map<int, int> assignedMap, int im
 	}
 	return floatMap;
 }
-
 
 //Turn into RGB Values
 std::map<int, int> createRGBMap(std::map<int, float> assignedMap) {
@@ -59,3 +57,25 @@ std::map<int, int> createRGBMap(std::map<int, float> assignedMap) {
 	return newMap;
 }
 
+std::vector<int> returnRGBMap(CImg<unsigned char> inputImage) {
+	int totalSize = inputImage.width() * inputImage.height() * inputImage.spectrum();
+	std::map<int, int> newMap;
+	//Vectorise data
+	std::vector<int> vectorisedImage = vectoriseData(inputImage); //change to output_image below or image_input above
+
+	//Create map
+	newMap = createHistogram(vectorisedImage);
+
+	//Cumulative Histogram
+	newMap = createCumulativeHistogram(newMap);
+
+	//Normalise
+	std::map<int, float> floatMap;
+	floatMap = createFloatHistogram(newMap, totalSize);
+
+	//Turn into corresponding RGB values
+	newMap = createRGBMap(floatMap);
+
+	std::vector<int>tempArr = vectoriseData(newMap);
+	return tempArr;
+}

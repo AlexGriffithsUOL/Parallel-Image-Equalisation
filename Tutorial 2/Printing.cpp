@@ -23,7 +23,7 @@ void print_map(map<int, float> const& m) {
 
 void print_vector(std::vector<int> vectorData) {
 	for (int i = 0; i < vectorData.size(); ++i) {
-		cout << vectorData[i] << "\n";
+		cout << i << " - " << vectorData[i] << "\n";
 	}
 }
 

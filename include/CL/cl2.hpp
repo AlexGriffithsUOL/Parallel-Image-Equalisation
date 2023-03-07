@@ -1538,6 +1538,7 @@ struct ReferenceHandler<cl_mem>
     static cl_int retain(cl_mem memory)
     { return ::clRetainMemObject(memory); }
     static cl_int release(cl_mem memory)
+
     { return ::clReleaseMemObject(memory); }
 };
 
