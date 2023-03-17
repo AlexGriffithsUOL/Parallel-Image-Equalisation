@@ -7,13 +7,13 @@ kernel void filter_r(global const uchar* A, global uchar* B) {
 	B[id] = A[id];
 }
 
-kernel void histogramEqualisation(global const uchar* A, global uchar* B, global int* correspondingArr) {
+kernel void translateByLookup(global const uchar* A, global uchar* B, global int* correspondingArr) {
 	int id = get_global_id(0);
 	B[id] = correspondingArr[A[id]];
-
+	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-kernel void translateByLookup(global const unsigned int* A, global const unsigned int* B, global int* C) {
+kernel void createHistogram(global const unsigned int* A, global const unsigned int* B, global int* C) {
 	int width = get_global_size(0); //image width in pixels
 	int height = get_global_size(1); //image height in pixels
 	int image_size = width * height; //image size in pixels
@@ -27,4 +27,53 @@ kernel void translateByLookup(global const unsigned int* A, global const unsigne
 
 	int key = (int)A[id];
 	++C[key];
+	barrier(CLK_GLOBAL_MEM_FENCE);
+}
+
+kernel void busterBrown(global const unsigned int* A, global int* C) {
+	int id = get_global_id(0);
+
+	C[id] = A[id];
+
+	if (id > 0) {
+		C[id + 1] += C[id];
+	}
+}
+
+
+
+kernel void scan_bl(global int* A) {
+	int id = get_global_id(0);
+	int N = get_global_size(0); int t;
+	// Up-sweep
+	for (int stride = 1; stride < N; stride *= 2) {
+		if (((id + 1) % (stride * 2)) == 0)
+			A[id] += A[id - stride];
+		barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
+	}
+	// Down-sweep
+	if (id == 0) A[N - 1] = 0; // Exclusive scan
+	barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
+	for (int stride = N / 2; stride > 0; stride /= 2) {
+		if (((id + 1) % (stride * 2)) == 0) {
+			t = A[id];
+			A[id] += A[id - stride]; // Reduce
+			A[id - stride] = t; // Move
+		}
+		barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
+	}
+}
+
+
+kernel void scan_hs(global int* A, global int* B) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	global int* C;
+	for (int stride = 1; stride < N; stride *= 2) {
+		B[id] = A[id];
+		if (id >= stride)
+			B[id] += A[id - stride];
+		barrier(CLK_GLOBAL_MEM_FENCE); // sync the step
+		C = A; A = B; B = C; // swap A & B between steps
+	}
 }
