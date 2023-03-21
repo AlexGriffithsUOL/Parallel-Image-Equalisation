@@ -203,11 +203,15 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
   <ItemGroup>
     <ClInclude Include="..\include\CImg.h" />
     <ClInclude Include="..\include\Utils.h" />
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="ConversionSerial.h" />
     <ClInclude Include="LibraryImport.h" />
     <ClInclude Include="MappingOperationsSerial.h" />
     <ClInclude Include="Printing.h" />
     <ClInclude Include="ReadingWriting.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="HolderForCode.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

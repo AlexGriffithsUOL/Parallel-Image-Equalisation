@@ -1,6 +1,7 @@
 #include "LibraryImport.h"
 #include "MappingOperationsSerial.h"
 #include "Printing.h"
+#include "Constants.h"
 
 #define MAX_SOURCE_SIZE (0x100000)
 
@@ -81,7 +82,7 @@ int main(int argc, char** argv) {
 
 	//detect any potential exceptions
 	try {
-		CImg<unsigned char> image_input(image_filename.c_str());
+		CImg<unsigned int> image_input(image_filename.c_str());
 		image_input._spectrum = 1;
 		CImgDisplay disp_input(image_input, "input");
 
@@ -108,140 +109,29 @@ int main(int argc, char** argv) {
 		cout << "Total size: " << totalSize << "\n";
 		cout << "Image size: " << image_input.size() << "\n"; //change to output_image below or image_input above
 
-
-
-
-
-		//Custom User kernel
-		const int LIST_SIZE = 256; //List size is set to the array size.
-		int* A = (int*)malloc(sizeof(int) * image_input.size());
-		int* B = (int*)malloc(sizeof(int) * LIST_SIZE);
-
-		for (int i = 0; i < image_input.size(); i++) { //Remove this 
-			A[i] = image_input._data[i];
-		} 
-
-
-
-
-
-		cl::Buffer a_mem_obj(context, CL_MEM_READ_ONLY, image_input.size() * sizeof(int)); 
-		cl::Buffer b_mem_obj(context, CL_MEM_READ_ONLY, LIST_SIZE * sizeof(int));
-		cl::Buffer c_mem_obj(context, CL_MEM_WRITE_ONLY, LIST_SIZE * sizeof(int));
-
-		queue.enqueueWriteBuffer(a_mem_obj, CL_TRUE ,0, image_input.size() * sizeof(int), A); 
-		queue.enqueueWriteBuffer(b_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), B);
-
-		cl::Kernel kernel = cl::Kernel(program, "createHistogram");
-		kernel.setArg(0, a_mem_obj);
-		kernel.setArg(1, b_mem_obj);
-		kernel.setArg(2, c_mem_obj);
-
-		size_t global_item_size = image_input.size(); // Process the entire lists
-		size_t local_item_size = 128; // Divide work items into groups of 64
-
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_item_size), cl::NDRange( local_item_size)); //Gets the range in the devices for the kernels
-
-		// Read the memory buffer C on the device to the local variable C
-		int* C = (int*)malloc(sizeof(int) * LIST_SIZE);
-		queue.enqueueReadBuffer(c_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), &C[0]); //Reads the output buffer back from the device
-
-
-
-		//Translate C to vector
-		vector<int>newTempArr;
-		int total = 0;
-		for (int i = 0; i < LIST_SIZE; i++) {
-			printf("%d - %d\n", i, C[i]);
-			total += C[i];
-			newTempArr.push_back(C[i]);//Add to array
-		}
-		cout << "Total size: " << total << "\n";
-
-		//Clean up
-		queue.flush();
-		queue.finish();
-		free(A);
-		free(B);
-		free(C);
-
-	
-		
 		
 
-		//Create cumulative histogram
-		A = (int*)malloc(sizeof(int) * LIST_SIZE);
-		B = (int*)malloc(sizeof(int) * LIST_SIZE);
 
-		for (int i = 0; i < newTempArr.size(); i++) { //Remove this 
-			A[i] = newTempArr[i];
-			B[i] = 0;
+		cl::Buffer dev_input_image(context, CL_MEM_READ_ONLY, image_input.size() * sizeof(unsigned int));
+		cl::Buffer hist_buffer(context, CL_MEM_READ_WRITE, K_NUM_BINS * sizeof(unsigned int)); //should be the same as input image
+		queue.enqueueWriteBuffer(dev_input_image, CL_TRUE, 0, image_input.size() * sizeof(unsigned int), &image_input.data()[0]);
+		cout << "Number of pixels in image: " << image_input.size() << endl;
+		cl::Kernel kernel = cl::Kernel(program, "histogramMaker");
+		kernel.setArg(0, dev_input_image);
+		kernel.setArg(1, hist_buffer);
+		kernel.setArg(2, (unsigned int)image_input.size());
+		
+
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange);
+		vector<int> histogram(K_NUM_BINS);
+		queue.enqueueReadBuffer(hist_buffer, CL_TRUE, 0, K_NUM_BINS * sizeof(unsigned int), &histogram.data()[0]);
+
+		cout << "Histogram" << endl;
+		for (unsigned int i = 0; i < histogram.size(); i++) {
+			cout << i << ": " << histogram[i] << endl;
 		}
 
 
-
-
-
-		a_mem_obj = cl::Buffer (context, CL_MEM_READ_WRITE, LIST_SIZE * sizeof(int));
-		b_mem_obj = cl::Buffer (context, CL_MEM_WRITE_ONLY, LIST_SIZE * sizeof(int));
-
-		queue.enqueueWriteBuffer(a_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), A);
-		queue.enqueueWriteBuffer(b_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), B);
-
-		kernel = cl::Kernel(program, "scan_hs");
-		kernel.setArg(0, a_mem_obj);
-		kernel.setArg(1, b_mem_obj);
-
-		global_item_size = LIST_SIZE; // Process the entire lists
-		local_item_size = 64; // Divide work items into groups of 64
-
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(global_item_size), cl::NDRange(local_item_size)); //Gets the range in the devices for the kernels
-
-		// Read the memory buffer C on the device to the local variable C
-		C = (int*)malloc(sizeof(int) * LIST_SIZE);
-		queue.enqueueReadBuffer(b_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), &C[0]); //Reads the output buffer back from the device
-
-		//Translate C to vector
-		/**/vector<int>newertempArr;
-		total = 0;
-		for (int i = 0; i < LIST_SIZE; i++) {
-			printf("%d - %d\n", i, C[i]);
-			total += C[i];
-			newertempArr.push_back(C[i]);//Add to array
-		}
-		cout << "Total size: " << total << "\n";
-
-		//Clean up
-		queue.flush();
-		queue.finish();
-		free(A);
-		free(B);
-		free(C);
-		
-
-		
-
-
-		//Contrast  via lookup table
-		cl::Buffer dev_image_input(context, CL_MEM_READ_ONLY, image_input.size());
-		cl::Buffer dev_image_output(context, CL_MEM_READ_WRITE, image_input.size()); //should be the same as input image
-		cl::Buffer lookUpTable(context, CL_MEM_READ_ONLY, newTempArr.size() * sizeof(int));
-
-		queue.enqueueWriteBuffer(dev_image_input, CL_TRUE, 0, image_input.size(), &image_input.data()[0]);
-		queue.enqueueWriteBuffer(lookUpTable, CL_TRUE, 0, newTempArr.size() * sizeof(int), &newTempArr[0]);// ampersand at the end bit points to the memory location of the tempArray element 0,
-
-		kernel = cl::Kernel(program, "translateByLookup");
-		kernel.setArg(0, dev_image_input);
-		kernel.setArg(1, dev_image_output);
-		kernel.setArg(2, lookUpTable); //Sets up the argument corresponding to the kernel function in my_kernels.cl
-
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(image_input.size()), cl::NullRange); //Gets the range in the devices for the kernels
-
-		vector<unsigned char> output_buffer(image_input.size());
-		queue.enqueueReadBuffer(dev_image_output, CL_TRUE, 0, output_buffer.size(), &output_buffer.data()[0]); //Reads the output buffer back from the device
-
-		queue.flush();
-		queue.finish();
 
 
 
@@ -249,10 +139,6 @@ int main(int argc, char** argv) {
 		std::vector<int> tempArr = returnRGBMap(image_input);
 		CImg<unsigned char> newer = historamEqualiseSerial(tempArr, image_input);
 		CImgDisplay oioi(newer, "Serial output");
-
-		//Display Final Parallel Result
-		CImg<unsigned char> output_image(output_buffer.data(), image_input.width(), image_input.height(), image_input.depth(), image_input.spectrum());
-		CImgDisplay disp_output(output_image, "Kernel output");
 
 		int huh;
 		cin >> huh;

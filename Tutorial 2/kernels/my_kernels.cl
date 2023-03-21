@@ -1,3 +1,31 @@
+#include "Constants.h"
+
+__kernel void histogramMaker(__global int* restrict in,
+	__global int* restrict bins,
+	uint count) {
+	// store a local copy of the histogram to avoid read-accumulate-writes
+	// to global memory
+	__attribute__((register)) int bins_local[K_NUM_BINS];
+
+	// initialize the local bins
+#pragma unroll
+	for (uint i = 0; i < K_NUM_BINS; i++) {
+		bins_local[i] = 0;
+	}
+
+	// compute the histogram
+#pragma ii 1
+	for (uint i = 0; i < count; i++) {
+		bins_local[in[i] % K_NUM_BINS]++;
+	}
+
+	// write back the local copy to global memory
+#pragma unroll
+	for (uint i = 0; i < K_NUM_BINS; i++) {
+		bins[i] = bins_local[i];
+	}
+}
+
 kernel void filter_r(global const uchar* A, global uchar* B) {
 	int id = get_global_id(0);
 	int image_size = get_global_size(0)/3; //each image consists of 3 colour channels
@@ -23,7 +51,7 @@ kernel void createHistogram(global const unsigned int* A, global const unsigned 
 	int y = get_global_id(1); //current y coord.
 	int c = get_global_id(2); //current colour channel
 
-	int id = x + y * width; +c * image_size; //global id in 1D space
+	int id = x + y * width; + c * image_size; //global id in 1D space       Remove all but using size
 
 	int key = (int)A[id];
 	++C[key];

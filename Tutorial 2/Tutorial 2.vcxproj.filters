@@ -23,6 +23,7 @@
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
+    <ClCompile Include="Printing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="kernels">
@@ -68,5 +69,11 @@
     <ClInclude Include="ReadingWriting.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="HolderForCode.txt" />
   </ItemGroup>
 </Project>

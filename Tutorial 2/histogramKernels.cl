@@ -1,21 +1,27 @@
-kernkernel void histogramEqualisation(global const uchar* A, global uchar* B, global int* correspondingArr) {
-	int id = get_global_id(0);
-	B[id] = correspondingArr[A[id]];
+#include "Constants.h"
 
-}
+__kernel void histogramMaker(__global int* restrict in,
+    __global int* restrict bins,
+    uint count) {
+    // store a local copy of the histogram to avoid read-accumulate-writes
+    // to global memory
+    __attribute__((register)) int bins_local[K_NUM_BINS];
 
-kernel void vector_add(global const unsigned int* A, global const unsigned int* B, global int* C) {
-	int width = get_global_size(0); //image width in pixels
-	int height = get_global_size(1); //image height in pixels
-	int image_size = width * height; //image size in pixels
-	int channels = get_global_size(2); //number of colour channels: 3 for RGB
+    // initialize the local bins
+#pragma unroll
+    for (uint i = 0; i < K_NUM_BINS; i++) {
+        bins_local[i] = 0;
+    }
 
-	int x = get_global_id(0); //current x coord.
-	int y = get_global_id(1); //current y coord.
-	int c = get_global_id(2); //current colour channel
+    // compute the histogram
+#pragma ii 1
+    for (uint i = 0; i < count; i++) {
+        bins_local[in[i] % K_NUM_BINS]++;
+    }
 
-	int id = x + y * width; +c * image_size; //global id in 1D space
-
-	int key = (int)A[id];
-	++C[key];
+    // write back the local copy to global memory
+#pragma unroll
+    for (uint i = 0; i < K_NUM_BINS; i++) {
+        bins[i] = bins_local[i];
+    }
 }
