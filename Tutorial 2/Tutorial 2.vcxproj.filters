@@ -24,6 +24,7 @@
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
+    <ClCompile Include="Printing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="kernels">
@@ -46,6 +47,9 @@
     <None Include="histogramKernels.cl">
       <Filter>kernels</Filter>
     </None>
+    <None Include="test(1).pgm" />
+    <None Include="test.ppm" />
+    <None Include="test_large.ppm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">

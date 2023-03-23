@@ -1,4 +1,5 @@
-#include "Constants.h"
+//#include "Constants.h"
+#define K_NUM_BINS 256
 
 __kernel void histogramMaker(__global int* restrict in,
 	__global int* restrict bins,
@@ -26,46 +27,22 @@ __kernel void histogramMaker(__global int* restrict in,
 	}
 }
 
-kernel void filter_r(global const uchar* A, global uchar* B) {
-	int id = get_global_id(0);
-	int image_size = get_global_size(0)/3; //each image consists of 3 colour channels
-	int colour_channel = id / image_size; // 0 - red, 1 - green, 2 - blue
 
-	//this is just a copy operation, modify to filter out the individual colour channels
-	B[id] = A[id];
+
+kernel void translateByLookup(global const unsigned int* A, global unsigned int* B, global const unsigned int* correspondingArr) {
+	int id = get_global_id(0);
+	B[id] = correspondingArr[(unsigned int)(A[id])];
 }
 
-kernel void translateByLookup(global const uchar* A, global uchar* B, global int* correspondingArr) {
+
+kernel void normaliseHistogram(__global const unsigned int* A, __global float* B, unsigned int imgSize) {
 	int id = get_global_id(0);
-	B[id] = correspondingArr[A[id]];
-	barrier(CLK_GLOBAL_MEM_FENCE);
+	B[id] = ((float)A[id] / imgSize);
 }
 
-kernel void createHistogram(global const unsigned int* A, global const unsigned int* B, global int* C) {
-	int width = get_global_size(0); //image width in pixels
-	int height = get_global_size(1); //image height in pixels
-	int image_size = width * height; //image size in pixels
-	int channels = get_global_size(2); //number of colour channels: 3 for RGB
-
-	int x = get_global_id(0); //current x coord.
-	int y = get_global_id(1); //current y coord.
-	int c = get_global_id(2); //current colour channel
-
-	int id = x + y * width; + c * image_size; //global id in 1D space       Remove all but using size
-
-	int key = (int)A[id];
-	++C[key];
-	barrier(CLK_GLOBAL_MEM_FENCE);
-}
-
-kernel void busterBrown(global const unsigned int* A, global int* C) {
+kernel void scaleTo255(__global float* A, __global unsigned int* B) {
 	int id = get_global_id(0);
-
-	C[id] = A[id];
-
-	if (id > 0) {
-		C[id + 1] += C[id];
-	}
+	B[id] = (unsigned int)(A[id] * 255);
 }
 
 
@@ -104,4 +81,34 @@ kernel void scan_hs(global int* A, global int* B) {
 		barrier(CLK_GLOBAL_MEM_FENCE); // sync the step
 		C = A; A = B; B = C; // swap A & B between steps
 	}
+}
+
+//a double-buffered version of the Hillis-Steele inclusive scan
+//requires two additional input arguments which correspond to two local buffers
+kernel void scan_add(__global const int* A, global uint* B,local int* scratch_1, local int* scratch_2) {
+	int id = get_global_id(0);
+	int lid = get_local_id(0);
+	int N = get_local_size(0);
+	local int* scratch_3;//used for buffer swap
+	//cache all N values from global memory to local memory
+	scratch_1[lid] = A[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE);//wait for all local threads to finish copying from global to local memory
+
+	for (int i = 1; i < N; i *=2) {
+		if (lid >= i)
+			scratch_2[lid] = scratch_1[lid] + scratch_1[lid - i];
+		else
+			scratch_2[lid] = scratch_1[lid];
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		//buffer swap
+		scratch_3 = scratch_2;
+		scratch_2 = scratch_1;
+		scratch_1 = scratch_3;
+	}
+
+	//copy the cache to output array
+	B[id] = scratch_1[lid];
 }

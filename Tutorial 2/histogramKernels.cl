@@ -1,5 +1,5 @@
-#include "Constants.h"
-
+//#include "Constants.h"
+#define K_NUM_BINS 256
 __kernel void histogramMaker(__global int* restrict in,
     __global int* restrict bins,
     uint count) {
