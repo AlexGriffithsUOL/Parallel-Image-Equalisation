@@ -2,7 +2,7 @@
 #include "ConversionSerial.h"
 #pragma once
 
-
+using namespace std;
 
 std::vector<int> vectoriseData(CImg<unsigned char> img) {
 	std::vector<int> vectorisedData;
@@ -78,4 +78,53 @@ std::vector<int> returnRGBMap(CImg<unsigned char> inputImage) {
 
 	std::vector<int>tempArr = vectoriseData(newMap);
 	return tempArr;
+}
+
+
+int getBinsize(int width, int height) { //I can't believe this is all to come up with even bins :)
+	std::vector<int> arr;
+	int n = width;
+
+	for (int i = 1; i <= n; ++i) {
+		if (n % i == 0)
+			arr.push_back(i);
+	}
+
+	cout << "The bin size is: " << arr.size() << "\n";
+	cout << "The bin numbers are: ";
+
+	for (int i = 0; i <= arr.size() - 1; ++i) {
+		std::cerr << arr[i] << " ";
+	}
+	cout << "\n";
+	bool checker = false;
+	int binSize = 0;
+
+	while (!checker) {
+		cout << "Enter a number from above: ";
+		binSize = 0;
+		try {
+			cin >> binSize;;
+			if (cin.fail()) { throw(std::invalid_argument("Input was not a valid number, please enter a valid integer above.")); }
+			cin.clear();
+			cin.ignore();
+			if (std::binary_search(arr.begin(), arr.end(), binSize)) { checker = true; }
+			else { throw(binSize); }
+		}
+		catch (int size) { cout << "Element is not in the array.\n"; }
+		catch (std::invalid_argument& e) {
+			cout << e.what() << endl;
+			cin.clear();
+			cin.ignore();
+			binSize = 0;
+		}
+		catch (...) {
+			cout << "Error detected please enter a valid number.\n";
+			cin.clear();
+			cin.ignore();
+		};
+	}
+
+	cout << "Bin size is: " << binSize << "\n";
+	return binSize;
 }

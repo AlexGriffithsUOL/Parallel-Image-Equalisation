@@ -1,6 +1,7 @@
 //#include "Constants.h"
 #define K_NUM_BINS 256
-
+//Need to pass another variable called binsize
+// 
 __kernel void histogramMaker(__global int* restrict in,
 	__global int* restrict bins,
 	uint count) {
@@ -27,11 +28,19 @@ __kernel void histogramMaker(__global int* restrict in,
 	}
 }
 
-
-
-kernel void translateByLookup(global const unsigned int* A, global unsigned int* B, global const unsigned int* correspondingArr) {
+//a very simple histogram implementation
+kernel void hist_simple(global const unsigned int* A, global unsigned int* H, unsigned int binSize) {
 	int id = get_global_id(0);
-	B[id] = correspondingArr[(unsigned int)(A[id])];
+	unsigned int bin_index = A[id]/binSize; // 42
+	atomic_inc(&H[bin_index]);
+}
+
+
+
+kernel void translateByLookup(global const unsigned int* A, global unsigned int* B, global const unsigned int* correspondingArr, int binSize) {
+	int id = get_global_id(0);
+	float binNumber = (float)(A[id]) / binSize;
+	B[id] = correspondingArr[(unsigned int)binNumber];
 }
 
 

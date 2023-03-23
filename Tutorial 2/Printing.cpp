@@ -8,14 +8,12 @@
 using namespace std;
 
 void print_map(map<int, int> const& m) {
-	cout << "\n NEW MAP ######################\n";
 	for (auto const& pair : m) {
 		cout << "|" << pair.first << "| " << pair.second << "\n";
 	}
 }
 
 void print_map(map<int, float> const& m) {
-	cout << "\n NEW MAP ######################\n";
 	for (auto const& pair : m) {
 		cout << "|" << pair.first << "| " << pair.second << "\n";
 	}

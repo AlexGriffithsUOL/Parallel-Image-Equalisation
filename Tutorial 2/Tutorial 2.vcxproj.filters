@@ -2,11 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Tutorial 2.cpp" />
-    <ClCompile Include="MapTest.cpp" />
     <ClCompile Include="TestingGround.cpp" />
-    <ClCompile Include="Printing.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Printing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

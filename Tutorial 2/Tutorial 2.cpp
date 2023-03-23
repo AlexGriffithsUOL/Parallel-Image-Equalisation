@@ -1,60 +1,13 @@
 #include "LibraryImport.h"
 #include "MappingOperationsSerial.h"
 #include "Printing.h"
+#include <cstdint>
 //#include "Constants.h"
 #define K_NUM_BINS 256
 
 //#define MAX_SOURCE_SIZE (0x100000)
 
 using namespace cimg_library;
-
-int getBinsize(int width, int height) { //I can't believe this is all to come up with even bins :)
-	std::vector<int> arr;
-	int n = width;
-
-	for (int i = 1; i <= n; ++i) {
-		if (n % i == 0)
-			arr.push_back(i);
-	}
-
-	cout << "The bin size is: " << arr.size() << "\n";
-	cout << "The bin numbers are: ";
-
-	for (int i = 0; i <= arr.size() - 1; ++i) {
-		std::cerr << arr[i] << " ";
-	}
-	cout << "\n";
-	bool checker = false;
-	int binSize = 0;
-
-	while (!checker) {
-		cout << "Enter a number from above: ";
-		binSize = 0;
-		try {
-			cin >> binSize;;
-			if (cin.fail()) { throw(std::invalid_argument("Input was not a valid number, please enter a valid integer above.")); }
-			cin.clear();
-			cin.ignore();
-			if (std::binary_search(arr.begin(), arr.end(), binSize)) { checker = true; }
-			else { throw(binSize); }
-		}
-		catch (int size) { cout << "Element is not in the array.\n"; }
-		catch (std::invalid_argument& e) {
-			cout << e.what() << endl;
-			cin.clear();
-			cin.ignore();
-			binSize = 0;
-		}
-		catch (...) {
-			cout << "Error detected please enter a valid number.\n";
-			cin.clear();
-			cin.ignore();
-		};
-	}
-
-	cout << "Bin size is: " << binSize << "\n";
-	return binSize;
-}
 
 void print_help() {
 	std::cerr << "Application usage:" << std::endl;
@@ -107,21 +60,43 @@ int main(int argc, char** argv) {
 		}
 
 		//Start
-		int totalSize = inputImage.size();
-		cout << "Total size: " << totalSize << "\n";
+		cout << "Total size image size: " << inputImage.size() << "\n";
+		cout << "Select a bin size from below:" << "\n";
+
+		int value = inputImage.max();
+		for (int i = 0; i < (ceil(log2(value))+ 1); ++i) {
+			cout << i << "| " << (pow(2, i)) << "\n";
+		}
+
+		unsigned int userinput;
+		cin >> userinput;
+		int binNumber = pow(2, userinput);
+		//unsigned int binSize = (pow(2,userinput));
+		unsigned int binSize = pow(2, ceil(log2(value))) / (binNumber);
+
+
 
 		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int));
-		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, K_NUM_BINS * sizeof(unsigned int)); //should be the same as input image
+		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, (binNumber) * sizeof(unsigned int)); //should be the same as input image
 		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0]);
-		cl::Kernel kernel = cl::Kernel(program, "histogramMaker");
+		cl::Kernel kernel = cl::Kernel(program, "hist_simple");
 		kernel.setArg(0, inputImageBuffer);
 		kernel.setArg(1, histogramBuffer);
-		kernel.setArg(2, (unsigned int)inputImage.size());
+		kernel.setArg(2, binSize);
 		
 
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange);
-		vector<int> histogram(K_NUM_BINS);
+		vector<unsigned int> histogram(binNumber);
 		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &histogram.data()[0]);
+
+
+
+		cout << "histogram" << histogram.size() << "\n";
+		for (unsigned int i = 0; i < histogram.size(); i++) {
+			cout << i << ": " << histogram[i] << "\n";
+		}
+
+
 
 
 		cl::Buffer cumulativeHistogramBuffer(context, CL_MEM_READ_WRITE, histogram.size() * sizeof(unsigned int));
@@ -133,17 +108,22 @@ int main(int argc, char** argv) {
 		kernel.setArg(3, cl::Local(histogram.size() * sizeof(unsigned int)));
 		
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(histogram.size()), cl::NullRange);
-		vector<int>cumHist(K_NUM_BINS);
+		vector<int>cumHist(binNumber);
 		queue.enqueueReadBuffer(cumulativeHistogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &cumHist.data()[0]);
 		queue.flush();
 
+		cout << "Cumulative histogram\n";
+		for (unsigned int i = 0; i < cumHist.size(); i++) {
+			cout << i << ": " << cumHist[i] << "\n";
+		}
+
 
 		cl::Buffer normalisedHistogramBuffer(context, CL_MEM_READ_WRITE, cumHist.size() * sizeof(float));
-		queue.enqueueWriteBuffer(cumulativeHistogramBuffer, CL_TRUE, 0, cumHist.size()*sizeof(unsigned int), &cumHist.data()[0]);
+		queue.enqueueWriteBuffer(cumulativeHistogramBuffer, CL_TRUE, 0, cumHist.size() * sizeof(unsigned int), &cumHist.data()[0]);
 		kernel = cl::Kernel(program, "normaliseHistogram");
 		kernel.setArg(0, cumulativeHistogramBuffer);
 		kernel.setArg(1, normalisedHistogramBuffer);
-		kernel.setArg(2, totalSize); //Sets up the argument corresponding to the kernel function in my_kernels.cl
+		kernel.setArg(2, (int)(inputImage.size())); //Sets up the argument corresponding to the kernel function in my_kernels.cl
 
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(cumHist.size()), cl::NullRange); //Gets the range in the devices for the kernels
 		vector<float>normHist(cumHist.size());
@@ -170,19 +150,22 @@ int main(int argc, char** argv) {
 
 		//Contrast  via lookup table
 		cl::Buffer outputImageBuffer(context, CL_MEM_READ_WRITE, inputImage.size() * sizeof(unsigned int));
+		//queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0]);
 		queue.enqueueWriteBuffer(scaleHistogramBuffer, CL_TRUE, 0, scaleHist.size() * sizeof(unsigned int), &scaleHist.data()[0]);
 		kernel = cl::Kernel(program, "translateByLookup");
 		kernel.setArg(0, inputImageBuffer);
 		kernel.setArg(1, outputImageBuffer);
 		kernel.setArg(2, scaleHistogramBuffer);
+		kernel.setArg(3, binSize);
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange);
 		vector<unsigned int> outputImageVector(inputImage.size());
 		queue.enqueueReadBuffer(outputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &outputImageVector.data()[0]);
-		
+		queue.flush();
 
 		//Display Final Parallel Result
 		CImg<unsigned char> output_image(outputImageVector.data(), inputImage.width(), inputImage.height(), inputImage.depth(), 1);
-		CImgDisplay disp_output(output_image, "Kernel output");
+		//CImgDisplay disp_output(output_image, "Kernel output");
+		output_image.display();
 
 
 
@@ -192,7 +175,10 @@ int main(int argc, char** argv) {
 		CImg<unsigned char> newer = historamEqualiseSerial(tempArr, inputImage);
 		CImgDisplay oioi(newer, "Serial output");
 
+		
+
 		int huh;
+
 		cin >> huh;
 		return 0;
 	}

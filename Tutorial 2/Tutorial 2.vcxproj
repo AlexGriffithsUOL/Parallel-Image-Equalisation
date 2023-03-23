@@ -189,9 +189,6 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
   <ItemGroup>
     <ClCompile Include="ConversionSerial.cpp" />
     <ClCompile Include="MappingOperationsSerial.cpp" />
-    <ClCompile Include="MapTest.cpp" />
-    <ClCompile Include="Printing.cpp" />
-    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="ReadingWriting.cpp" />
     <ClCompile Include="TestingGround.cpp" />
     <ClCompile Include="Tutorial 2.cpp" />
