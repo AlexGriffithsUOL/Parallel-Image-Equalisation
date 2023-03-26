@@ -3,9 +3,6 @@
   <ItemGroup>
     <ClCompile Include="Tutorial 2.cpp" />
     <ClCompile Include="TestingGround.cpp" />
-    <ClCompile Include="Printing.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MappingOperationsSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -43,8 +40,7 @@
     <None Include="histogramKernels.cl">
       <Filter>kernels</Filter>
     </None>
-    <None Include="test(1).pgm" />
-    <None Include="test.ppm" />
+    <None Include="test.pgm" />
     <None Include="test_large.ppm" />
   </ItemGroup>
   <ItemGroup>

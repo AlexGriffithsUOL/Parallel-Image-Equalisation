@@ -1,7 +1,5 @@
-//#include "Constants.h"
 #define K_NUM_BINS 256
 //Need to pass another variable called binsize
-// 
 __kernel void histogramMaker(__global int* restrict in,
 	__global int* restrict bins,
 	uint count) {
@@ -11,27 +9,27 @@ __kernel void histogramMaker(__global int* restrict in,
 
 	// initialize the local bins
 #pragma unroll
-	for (uint i = 0; i < K_NUM_BINS; i++) {
+	for (uint i = 0; i < K_NUM_BINS; i++) { 
 		bins_local[i] = 0;
 	}
 
 	// compute the histogram
 #pragma ii 1
 	for (uint i = 0; i < count; i++) {
-		bins_local[in[i] % K_NUM_BINS]++;
+		bins_local[in[i] % K_NUM_BINS]++;  //K num bins swapped for binnumber
 	}
 
 	// write back the local copy to global memory
 #pragma unroll
-	for (uint i = 0; i < K_NUM_BINS; i++) {
-		bins[i] = bins_local[i];
+	for (uint i = 0; i < K_NUM_BINS; i++) { //Knumbins swap for bin number
+		bins[i] = bins_local[i]; 
 	}
 }
 
 //a very simple histogram implementation
 kernel void hist_simple(global const unsigned int* A, global unsigned int* H, unsigned int binSize) {
 	int id = get_global_id(0);
-	unsigned int bin_index = A[id]/binSize; // 42
+	unsigned int bin_index = A[id]/binSize;
 	atomic_inc(&H[bin_index]);
 }
 
@@ -56,7 +54,7 @@ kernel void scaleTo255(__global float* A, __global unsigned int* B) {
 
 
 
-kernel void scan_bl(global int* A) {
+kernel void scan_bl(global uint* A) {
 	int id = get_global_id(0);
 	int N = get_global_size(0); int t;
 	// Up-sweep
@@ -72,6 +70,7 @@ kernel void scan_bl(global int* A) {
 		if (((id + 1) % (stride * 2)) == 0) {
 			t = A[id];
 			A[id] += A[id - stride]; // Reduce
+			printf("%d\n", A[id]);
 			A[id - stride] = t; // Move
 		}
 		barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
