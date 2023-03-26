@@ -6,13 +6,13 @@
     <ClCompile Include="MappingOperationsSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="ConversionSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ReadingWriting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
@@ -42,6 +42,8 @@
     </None>
     <None Include="test.pgm" />
     <None Include="test_large.ppm" />
+    <None Include="BigSample.pgm" />
+    <None Include="MassiveSample.pgm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">
