@@ -1,27 +1,17 @@
 #define K_NUM_BINS 256
 //Need to pass another variable called binsize
-__kernel void histogramMaker(__global int* restrict in,
-	__global int* restrict bins,
-	uint count) {
-	// store a local copy of the histogram to avoid read-accumulate-writes
-	// to global memory
-	__attribute__((register)) int bins_local[K_NUM_BINS];
-
-	// initialize the local bins
-#pragma unroll
-	for (uint i = 0; i < K_NUM_BINS; i++) { 
+__kernel void histogramMaker(__global uint* input, __global uint* bins, uint count, local uint* bins_local, uint numBins) {
+	for (uint i = 0; i < numBins; i++) { 
 		bins_local[i] = 0;
 	}
-
-	// compute the histogram
-#pragma ii 1
+	
+	
 	for (uint i = 0; i < count; i++) {
-		bins_local[in[i] % K_NUM_BINS]++;  //K num bins swapped for binnumber
+		bins_local[input[i] % numBins]++;  //K num bins swapped for binnumber
 	}
+	
 
-	// write back the local copy to global memory
-#pragma unroll
-	for (uint i = 0; i < K_NUM_BINS; i++) { //Knumbins swap for bin number
+	for (uint i = 0; i < numBins; i++) { //Knumbins swap for bin number
 		bins[i] = bins_local[i]; 
 	}
 }

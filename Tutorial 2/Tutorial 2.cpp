@@ -11,10 +11,10 @@ using namespace cimg_library;
 
 void printKernelInfo(unsigned int WT, unsigned int ET, unsigned int RT, unsigned int dataSize, string kernelType) {
 	cout << "Displaying " << kernelType.c_str() << " Kernel profiling:" << "\n";
-	cout << "	Kernel Writing Time: " << WT / 1000 << "ms\n";
-	cout << "	Kernel Execution Time: " << ET/ 1000 << "ms\n";
-	cout << "	Kernel Reading Time: " << RT / 1000<< "ms\n";
-	cout << "	Total Kernel Time: " << (WT + ET + RT) / 10000 << "ms\n";
+	cout << "	Kernel Writing Time: " << ((float)WT / 1000000) << "ms\n";
+	cout << "	Kernel Execution Time: " << ((float)ET/ 1000000) << "ms\n";
+	cout << "	Kernel Reading Time: " << ((float)RT / 1000000)<< "ms\n";
+	cout << "	Total Kernel Time: " << ((float)(WT + ET + RT) / 1000000) << "ms\n";
 }
 
 void print_help() {
@@ -30,7 +30,7 @@ void print_help() {
 int main(int argc, char** argv) {
 	int platform_id = 3;
 	int device_id = 0;
-	string image_filename = "16.pgm";
+	string image_filename = "test_large2.pgm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platform_id = atoi(argv[++i]); }
@@ -96,20 +96,57 @@ int main(int argc, char** argv) {
 		//BinSize is equivalent to the width of the bin to be used as a divisor
 		unsigned int binSize = pow(2, ceil(log2(value))) / (binNumber);
 
+
+
+
+
+
+		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int));
+		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, binNumber * sizeof(unsigned int)); //should be the same as input image
+		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0], NULL, &timingW);
+		cl::Kernel kernel = cl::Kernel(program, "histogramMaker");
+		kernel.setArg(0, inputImageBuffer);
+		kernel.setArg(1, histogramBuffer);
+		kernel.setArg(2, (unsigned int)inputImage.size());
+		kernel.setArg(3, cl::Local(binNumber * sizeof(unsigned int)));
+		kernel.setArg(4, binNumber);
+
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange, NULL, &timingE);
+
+		vector<unsigned int> histogram2(binNumber); //Bin number used to 
+		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histogram2.size() * sizeof(unsigned int), &histogram2.data()[0], NULL, &timingR); //Pointer is used to point to the start of the histogram vector to read data back into
+		
+		printKernelInfo(timingW.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingW.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
+			timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
+			timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
+			inputImage.size(),
+			"Histogram1");
+
+
+		for (int i = 0; i < histogram2.size(); ++i) {
+			cout << i << " " << histogram2[i] << "\n";
+		}
+		
+
+
+
+
 		//Display The Initial Picture
-		inputImage.display("Original Image", true, 0, true);;
+		inputImage.display("Original Image", true, 0, true);
 
 		/*----Create initial image histogram----*/
 		vector<unsigned int> histogram(binNumber); //Bin number used to 
 		//Create buffers for image and histogram
-		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int)); //unsigned int used to handle higher bit images
-		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, (histogram.size()) * sizeof(unsigned int));
-		
+		//cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int)); //unsigned int used to handle higher bit images
+		//cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, (histogram.size()) * sizeof(unsigned int));
+		histogramBuffer = cl::Buffer(context, CL_MEM_READ_WRITE, inputImage.size() * sizeof(unsigned int));
+		inputImageBuffer= cl::Buffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int));
 		//Writing to buffer
 		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0], NULL, &timingW); //Writes the image into a buffer
 
 		//Setting up program for kernels
-		cl::Kernel kernel = cl::Kernel(program, "hist_simple"); 
+		//cl::Kernel kernel = cl::Kernel(program, "hist_simple"); 
+		kernel = cl::Kernel(program, "hist_simple"); 
 		//Setting up kernel arguments
 		kernel.setArg(0, inputImageBuffer);
 		kernel.setArg(1, histogramBuffer);
@@ -128,11 +165,9 @@ int main(int argc, char** argv) {
 						timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 						inputImage.size(),
 						"Histogram");
-
 		CImg<unsigned int> histogr(histogram.data(), binNumber);
 		histogr.display_graph("Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
-
 
 		cout << "Select a scan: " << "\n";
 		cout << "0| Blelloch" << "\n";

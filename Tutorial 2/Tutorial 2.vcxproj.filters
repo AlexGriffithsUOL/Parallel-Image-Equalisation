@@ -49,6 +49,9 @@
     <None Include="TEST16.PGM" />
     <None Include="img0001.pgm" />
     <None Include="img0010.pgm" />
+    <None Include="16.pgm" />
+    <None Include="test_large2.pgm" />
+    <None Include="test.ppm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">

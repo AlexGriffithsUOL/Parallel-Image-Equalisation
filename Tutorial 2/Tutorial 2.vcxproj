@@ -195,6 +195,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <ClCompile Include="Tutorial 2.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="16.pgm" />
     <None Include="16BitTest.pgm" />
     <None Include="BigSample.pgm" />
     <None Include="histogramKernels.cl" />
@@ -204,8 +205,10 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <None Include="m612.pgm" />
     <None Include="MassiveSample.pgm" />
     <None Include="test.pgm" />
+    <None Include="test.ppm" />
     <None Include="TEST16.PGM" />
     <None Include="test_large.ppm" />
+    <None Include="test_large2.pgm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\CImg.h" />
