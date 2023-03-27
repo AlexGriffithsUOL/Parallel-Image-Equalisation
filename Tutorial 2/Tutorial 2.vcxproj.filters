@@ -44,6 +44,11 @@
     <None Include="test_large.ppm" />
     <None Include="BigSample.pgm" />
     <None Include="MassiveSample.pgm" />
+    <None Include="m612.pgm" />
+    <None Include="16BitTest.pgm" />
+    <None Include="TEST16.PGM" />
+    <None Include="img0001.pgm" />
+    <None Include="img0010.pgm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">

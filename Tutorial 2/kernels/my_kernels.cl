@@ -27,18 +27,22 @@ __kernel void histogramMaker(__global int* restrict in,
 }
 
 //a very simple histogram implementation
-kernel void hist_simple(global const unsigned int* A, global unsigned int* H, unsigned int binSize) {
+kernel void hist_simple(global const unsigned int* A, global unsigned int* H, local uint* temp, unsigned int binSize) {
 	int id = get_global_id(0);
-	unsigned int bin_index = A[id]/binSize;
+	int lid = get_local_id(0);
+	local uint scratch_1;
+	temp[id] = A[id];
+	scratch_1 = temp[id];
+	unsigned int bin_index = scratch_1/binSize;
 	atomic_inc(&H[bin_index]);
 }
 
 
 
-kernel void translateByLookup(global const unsigned int* A, global unsigned int* B, global const unsigned int* correspondingArr, int binSize) {
+kernel void translateByLookup(global uint* A, global const uint* correspondingArr, const uint binSize) {
 	int id = get_global_id(0);
 	float binNumber = (float)(A[id]) / binSize;
-	B[id] = correspondingArr[(unsigned int)binNumber];
+	A[id] = correspondingArr[(unsigned int)binNumber];
 }
 
 
@@ -47,36 +51,19 @@ kernel void normaliseHistogram(__global const unsigned int* A, __global float* B
 	B[id] = ((float)A[id] / imgSize);
 }
 
+kernel void normaliseHistogramFaster(__global float* A, local float* B, unsigned int imgSize) {
+	int id = get_global_id(0);
+	B[id] = (float)A[id];
+	B[id] = (B[id] / imgSize);
+	A[id] = B[id];
+}
+
 kernel void scaleTo255(__global float* A, __global unsigned int* B) {
 	int id = get_global_id(0);
 	B[id] = (unsigned int)(A[id] * 255);
 }
 
 
-
-kernel void scan_bl(global uint* A) {
-	int id = get_global_id(0);
-	int N = get_global_size(0); 
-	int t;
-	// Up-sweep
-	for (int stride = 1; stride < N; stride *= 2) {
-		if (((id + 1) % (stride * 2)) == 0)
-			A[id] += A[id - stride];
-		//barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
-	}
-	// Down-sweep
-	if (id == 0) A[N - 1] = 0; // Exclusive scan
-	//barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
-	for (int stride = N / 2; stride > 0; stride /= 2) {
-		if (((id + 1) % (stride * 2)) == 0) {
-			t = A[id];
-			//A[id] += A[id - stride]; // Reduce
-			printf("%d\n", A[id]);
-			A[id - stride] = t; // Move
-		}
-		//barrier(CLK_GLOBAL_MEM_FENCE); // Sync the step
-	}
-}
 
 kernel void scan_parallel_naive_SAT(global const uint* input, global uint* output, const uint n)
 {
@@ -117,7 +104,7 @@ kernel void scan_hs(global int* A, global int* B) {
 
 //a double-buffered version of the Hillis-Steele inclusive scan
 //requires two additional input arguments which correspond to two local buffers
-kernel void scan_add(__global const int* A, global uint* B,local int* scratch_1, local int* scratch_2) {
+kernel void scan_add(global const int* A, global uint* B,local uint* scratch_1, local uint* scratch_2) {
 	int id = get_global_id(0);
 	int lid = get_local_id(0);
 	int N = get_local_size(0);
@@ -143,77 +130,37 @@ kernel void scan_add(__global const int* A, global uint* B,local int* scratch_1,
 
 	//copy the cache to output array
 	B[id] = scratch_1[lid];
+	
 }
 
 
+//Blelloch basic exclusive scan
+kernel void scan_bl(global unsigned int* A) {
+	unsigned int id = get_global_id(0);
+	unsigned int N = get_global_size(0);
+	unsigned int t;
 
+	//up-sweep
+	for (unsigned int stride = 1; stride < N; stride *= 2) {
+		if (((id + 1) % (stride * 2)) == 0)
+			A[id] += A[id - stride];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-__kernel void histogram(__global const uchar* data,
-	__global uint* histogram,
-	const uint data_size, const uint group_size)
-{
-	// Allocate shared memory for the local histogram
-	__local uint local_histogram[256];
-	for (uint i = 0; i < 256; i++) {
-		local_histogram[i] = 0;
+		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Each work-group will process a subset of the data
-	const uint group_id = get_group_id(0);
-	const uint local_id = get_local_id(0);
-	const uint global_id = get_global_id(0);
+	//down-sweep
+	if (id == 0)
+		A[N - 1] = 0;//exclusive scan
 
-	// Compute the range of data elements to be processed by this work-group
-	const uint start_index = group_id * group_size;
-	const uint end_index = start_index + group_size;
+	barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
 
-	// Add padding to the input data array to handle boundary cases
-	__local uchar local_data[group_size + group_size - 1];
-	for (uint i = local_id; i < group_size + group_size - 1; i += group_size) {
-		if (start_index + i - group_size / 2 < data_size) {
-			local_data[i] = data[start_index + i - group_size / 2];
+	for (unsigned int stride = N / 2; stride > 0; stride /= 2) {
+		if (((id + 1) % (stride * 2)) == 0) {
+			t = A[id];
+			A[id] += A[id - stride]; //reduce 
+			A[id - stride] = t;      //move
 		}
-		else {
-			local_data[i] = 0;
-		}
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// Process the data elements in this range and update the local histogram
-	for (uint i = local_id + group_size / 2; i < group_size + group_size / 2 && start_index + i - group_size / 2 < data_size; i += group_size) {
-		const uchar bin = local_data[i];
-		local_histogram[bin]++;
+		barrier(CLK_GLOBAL_MEM_FENCE); //sync the step
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	// Combine the local histograms from all work-groups and write the final histogram
-	if (local_id == 0) {
-		for (uint i = 0; i < 256; i++) {
-			uint bin_count = local_histogram[i];
-			for (uint j = 1; j < get_num_groups(0); j++) {
-				bin_count += local_histogram[i + j * group_size];
-			}
-			histogram[i] = bin_count;
-		}
-	}
-}*/
+}
