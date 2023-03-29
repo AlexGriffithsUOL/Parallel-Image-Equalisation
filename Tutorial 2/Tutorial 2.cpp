@@ -128,8 +128,10 @@ int main(int argc, char** argv) {
 		inputImage.display("Original Image", true, 0, true);
 
 		/*----Create initial image histogram----*/
-		vector<unsigned int> histogram(binNumber); //Bin number used to 
-		//Create buffers for image and histogram
+		//Create vectors to store data
+		vector<unsigned int> histogram(binNumber); //Bin number used to setup the appropriate histogram size
+
+		//Create buffers
 		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int)); //unsigned int used to handle higher bit images
 		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, (histogram.size()) * sizeof(unsigned int));
 		
@@ -138,19 +140,20 @@ int main(int argc, char** argv) {
 
 		//Setting up program for kernels
 		cl::Kernel kernel = cl::Kernel(program, "hist_simple"); //Sets the program name to the correct one
+
 		//Setting up kernel arguments
 		kernel.setArg(0, inputImageBuffer); //Buffer is set as an argument to be read into the kernel
 		kernel.setArg(1, histogramBuffer); //Buffer is set as an argument to be read back from the kernel calculations
 		kernel.setArg(2, cl::Local(histogram.size() * sizeof(unsigned int) / binNumber)); //Bin number is used as a divisor to prevent 16 bit images from using too many resource
 		kernel.setArg(3, binSize); //Used as a divisor to keep the bins continous - note it is not the number but the size, i.e. width of the bin
 
-		//Launching kernels
+		//Launch correct number of Kernels
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange, NULL, &timingE); //Launches the kernels, using the correct sizing, calls execution profiler event
 
 		//Reading the buffer return
-		//2vector<unsigned int> histogram(binNumber); //Bin number used to 
 		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &histogram.data()[0], NULL, &timingR); //Pointer is used to point to the start of the histogram vector to read data back into
 																																			 //Call reading profiler event
+		//Display profiling times
 		cout << "Histogram created" << "\n"; //Writes to show the the historam has been created
 		printKernelInfo(timingW.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingW.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Writing timing event
 						timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Execution timing event
@@ -175,18 +178,22 @@ int main(int argc, char** argv) {
 
 
 		/*----Create a cumulative histogram*/
-		  //Part 2: Cumulative histogram
-		cl::Buffer cumulativeHistogramBuffer(context, CL_MEM_READ_WRITE, histogram.size() * sizeof(unsigned int)); //Based off of histogram size for consistancy with bins
+		//Part 2: Cumulative histogram
+		//Create vectors to store data
 		vector<unsigned int>cumulHist(histogram.size());
+
+		//Create buffers
+		cl::Buffer cumulativeHistogramBuffer(context, CL_MEM_READ_WRITE, histogram.size() * sizeof(unsigned int)); //Based off of histogram size for consistancy with bins
 
 		//Create the correct kernel depending on the selection
 		if (input) //If statement to swap between user input
 		{
 			cout << "Hillis-Steele selected.\n";
-			//Setup kernel
+
+			//Setup kernel with appropriate program
 			kernel = cl::Kernel(program, "scan_add"); //Hillis-Steel program
 
-			//Set kernel arguments
+			//Setting up kernel arguments
 			kernel.setArg(0, histogramBuffer); //Histogram added to be altered
 			kernel.setArg(1, cumulativeHistogramBuffer); //Buffer created to read from
 			kernel.setArg(2, cl::Local((sizeof(unsigned int)))); //Unsigned int used as it allows for 16-bit by not overloading the memory of the device
@@ -194,25 +201,33 @@ int main(int argc, char** argv) {
 		}
 		else
 		{
+			
 			cout << "Blelloch selected.\n";
+			
+			//Setup kernel with appropriate program
 			kernel = cl::Kernel(program, "scan_bl"); //Blelloch scan program
+
+			//Swap buffers
 			cumulativeHistogramBuffer = histogramBuffer; //Buffers changed to allow for program to alter historam data instead of empty buffer 
+
+			//Setting up kernel arguments
 			kernel.setArg(0, cumulativeHistogramBuffer); //Only requires one buffer
 		}
 
+		//Launch correct number of Kernels
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(histogram.size()), cl::NullRange, NULL, &timingE); //Launches the kernels to do the calculations
 
 		//Reading the data back from the buffer
 		queue.enqueueReadBuffer(cumulativeHistogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &cumulHist.data()[0], NULL, &timingR); //Reads the buffer back into the vector
 
-		//Displaying the kernel execution time
+		//Display profiling times
 		cout << "Histogram cumulated" << "\n";
 		printKernelInfo(timingW.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingW.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			"Cumulative Histogram");
 
-		//Display graph of the histogram
+		//Display cumulative histogram
 		CImg<unsigned int> cumulativeHistogramImage(cumulHist.data(), binNumber);
 		cumulativeHistogramImage.display_graph("Cumulative Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
@@ -220,35 +235,37 @@ int main(int argc, char** argv) {
 
 
 		/*----Create a Normalised Historam----*/
-		
+		//Create vectors to store data
+		vector<float>normHist(cumulHist.size());
+
+		//Create buffers
 		cl::Buffer normalisedHistogramBuffer(context, CL_MEM_READ_WRITE, histogram.size() * sizeof(float)); //Based off of histogram size for consistancy with bins
 
-
+		//Writing to buffer
 		queue.enqueueWriteBuffer(normalisedHistogramBuffer, CL_TRUE, 0, normHist.size() * sizeof(float), &normHist.data()[0], NULL, &timingW);
 
-
+		//Setup kernel with appropriate program
 		kernel = cl::Kernel(program, "normaliseHistogram");
 
-
+		//Setting up kernel arguments
 		kernel.setArg(0, cumulativeHistogramBuffer);
 		kernel.setArg(1, normalisedHistogramBuffer);  //Used to read back the final image
 		kernel.setArg(2, (int)(inputImage.size())); //Sets up the argument corresponding to the kernel function in my_kernels.cl
 
-
+		//Launch correct number of Kernels
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(cumulHist.size()), cl::NullRange, NULL, &timingE); //Gets the range in the devices for the kernels
 
-
-		vector<float>normHist(cumulHist.size());
+		//Reading the data back from the buffer
 		queue.enqueueReadBuffer(normalisedHistogramBuffer, CL_TRUE, 0, cumulHist.size()*sizeof(float), &normHist.data()[0], NULL, &timingR); //Reads the output buffer back from the device
 
-
+		//Display profiling times
 		cout << "Histogram normalised" << "\n";
 		printKernelInfo(timingW.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingW.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			"Normalised Histogram");
 
-		//Display histogram
+		//Display normalised histogram
 		CImg<float> normhistogr(normHist.data(), binNumber);
 		normhistogr.display_graph("Normalised Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
@@ -256,20 +273,23 @@ int main(int argc, char** argv) {
 
 
 		/*----Create a scaled histogram----*/
-		//Create a buffer to hold the scaled histogram, based off of the size of the previous to keep the sizes continous with the bins
-		cl::Buffer scaleHistogramBuffer(context, CL_MEM_READ_WRITE, normHist.size() * sizeof(unsigned int));
-		//Set up the kernel with the correct program
-		kernel = cl::Kernel(program, "scaleTo255");
+		//Create vectors to store data
+		vector<unsigned int> scaleHist(normHist.size());  //Based on previous histogram size for continuity
 
-		//Set arguments for the kernels
-		kernel.setArg(0, normalisedHistogramBuffer);  //Used to altering the data
+		//Create buffers
+		cl::Buffer scaleHistogramBuffer(context, CL_MEM_READ_WRITE, normHist.size() * sizeof(unsigned int));
+
+		//Setup kernel with appropriate program
+		kernel = cl::Kernel(program, "scaleTo255"); //Sets the kernel program to scale the histogram
+
+		//Setting up kernel arguments
+		kernel.setArg(0, normalisedHistogramBuffer);  //Used to alter the data
 		kernel.setArg(1, scaleHistogramBuffer);  //Used to read back the scaled data
 
-		//Launch the kernels
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(normHist.size()), cl::NullRange, NULL, &timingE);
+		//Launch correct number of Kernels
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(normHist.size()), cl::NullRange, NULL, &timingE); //Launches the correct number of kernels for the calculations
 
-		//Read back the data
-		vector<unsigned int> scaleHist(normHist.size());  //Based on previous histogram size for continuity
+		//Reading the data back from the buffer
 		queue.enqueueReadBuffer(scaleHistogramBuffer, CL_TRUE, 0, scaleHist.size()*sizeof(unsigned int), &scaleHist.data()[0], NULL, &timingR);  //Reads to the starting pointer of the scaled histogram
 
 		//Display profiling times
@@ -284,22 +304,24 @@ int main(int argc, char** argv) {
 		scalehistogr.display_graph("Scaled Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
 		
-
+		
 
 		/*----Contrast  via lookup table----*/
-		//Set kernel program
+		//Create vectors to store data
+		vector<unsigned int> outputImageVector(inputImage.size()); //Vector created to store image
+
+		//Setup kernel with appropriate program
 		kernel = cl::Kernel(program, "translateByLookup"); //Sets the kernel program to translate it from a lookup table
 
-		//Set kernel arguments
+		//Setting up kernel arguments
 		kernel.setArg(0, inputImageBuffer);  //Used to pass in the values to convert
 		kernel.setArg(1, scaleHistogramBuffer);  //Used as a look up table
 		kernel.setArg(2, binSize);  //Used as a divisor to put in appropriate bins
 
-		//Launch Kernels
+		//Launch correct number of Kernels
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange, NULL, &timingE); //Launches the correct range of kernels to process image
 
-		//Store Data
-		vector<unsigned int> outputImageVector(inputImage.size()); //Vector created to store image
+		//Reading the data back from the buffer
 		queue.enqueueReadBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &outputImageVector.data()[0], NULL, &timingR); //Reads buffer starting from the pointer at the vector data start
 		queue.flush(); //Clear queue, not necessary as it is handled by the garbage collector in the library however done to be sure of no memory leakage
 
