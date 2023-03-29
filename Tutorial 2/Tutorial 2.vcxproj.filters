@@ -21,6 +21,9 @@
     <ClCompile Include="KernelLaunch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UserInputHandling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="kernels">
@@ -53,7 +56,7 @@
     <None Include="img0001.pgm" />
     <None Include="img0010.pgm" />
     <None Include="16.pgm" />
-    <None Include="test_large2.pgm" />
+    <None Include="test_large.pgm" />
     <None Include="test.ppm" />
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +82,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LibraryImport.h" />
+    <ClInclude Include="UserInputHandling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="HolderForCode.txt" />

@@ -194,6 +194,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <ClCompile Include="ReadingWriting.cpp" />
     <ClCompile Include="TestingGround.cpp" />
     <ClCompile Include="Tutorial 2.cpp" />
+    <ClCompile Include="UserInputHandling.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="16.pgm" />
@@ -209,7 +210,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <None Include="test.ppm" />
     <None Include="TEST16.PGM" />
     <None Include="test_large.ppm" />
-    <None Include="test_large2.pgm" />
+    <None Include="test_large.pgm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\CImg.h" />
@@ -220,6 +221,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <ClInclude Include="MappingOperationsSerial.h" />
     <ClInclude Include="Printing.h" />
     <ClInclude Include="ReadingWriting.h" />
+    <ClInclude Include="UserInputHandling.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="HolderForCode.txt" />
