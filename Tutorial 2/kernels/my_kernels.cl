@@ -4,16 +4,17 @@ __kernel void histogramMaker(__global uint* input, __global uint* bins, uint cou
 	for (uint i = 0; i < numBins; i++) { 
 		bins_local[i] = 0;
 	}
-	
+	barrier(CLK_LOCAL_MEM_FENCE);
 	
 	for (uint i = 0; i < count; i++) {
 		bins_local[input[i] % numBins]++;  //K num bins swapped for binnumber
 	}
+	barrier(CLK_LOCAL_MEM_FENCE);
 	
-
 	for (uint i = 0; i < numBins; i++) { //Knumbins swap for bin number
 		bins[i] = bins_local[i]; 
 	}
+
 }
 
 //a very simple histogram implementation
@@ -64,6 +65,7 @@ kernel void scan_parallel_naive_SAT(global const uint* input, global uint* outpu
 	temp[pout * n + thread] = (thread > 0) ? input[thread - 1] : 0;
 
 	barrier(CLK_LOCAL_MEM_FENCE);
+
 	for (int offset = 1; offset < n; offset *= 2)
 	{
 		pout = 1 - pout; // swap double buffer indices

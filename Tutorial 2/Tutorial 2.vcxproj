@@ -188,6 +188,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConversionSerial.cpp" />
+    <ClCompile Include="KernelLaunch.cpp" />
     <ClCompile Include="MappingOperationsSerial.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="ReadingWriting.cpp" />

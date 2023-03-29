@@ -21,4 +21,4 @@ std::map<int, float> createFloatHistogram(std::map<int, int> assignedMap, int im
 std::map<int, int> createRGBMap(std::map<int, float> assignedMap);
 
 //Full run of the functions
-std::vector<int> returnRGBMap(CImg<unsigned char> inputImage);
+CImg<unsigned char> returnRGBMap(CImg<unsigned char> inputImage);

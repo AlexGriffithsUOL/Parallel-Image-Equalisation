@@ -1,11 +1,11 @@
-#include "LibraryImport.h"
 #include "MappingOperationsSerial.h"
-#include "Printing.h"
-#include <cstdint>
-//#include "Constants.h"
-#define K_NUM_BINS 256
+#include "ReadingWriting.h"
+#include <iostream>
+#include <vector>
+#include "Utils.h"
+#include "CImg.h"
+#include "CL/cl2.hpp"
 
-//#define MAX_SOURCE_SIZE (0x100000)
 
 using namespace cimg_library;
 
@@ -30,7 +30,7 @@ void print_help() {
 int main(int argc, char** argv) {
 	int platform_id = 3;
 	int device_id = 0;
-	string image_filename = "test_large2.pgm";
+	string image_filename = "test_large.ppm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platform_id = atoi(argv[++i]); }
@@ -104,12 +104,11 @@ int main(int argc, char** argv) {
 		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int));
 		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, binNumber * sizeof(unsigned int)); //should be the same as input image
 		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0], NULL, &timingW);
-		cl::Kernel kernel = cl::Kernel(program, "histogramMaker");
+		cl::Kernel kernel = cl::Kernel(program, "hist_simple");
 		kernel.setArg(0, inputImageBuffer);
 		kernel.setArg(1, histogramBuffer);
-		kernel.setArg(2, (unsigned int)inputImage.size());
-		kernel.setArg(3, cl::Local(binNumber * sizeof(unsigned int)));
-		kernel.setArg(4, binNumber);
+		kernel.setArg(2, cl::Local(sizeof(unsigned int)));
+		kernel.setArg(3, binSize);
 
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(inputImage.size()), cl::NullRange, NULL, &timingE);
 
@@ -121,11 +120,6 @@ int main(int argc, char** argv) {
 			timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(),
 			inputImage.size(),
 			"Histogram1");
-
-
-		for (int i = 0; i < histogram2.size(); ++i) {
-			cout << i << " " << histogram2[i] << "\n";
-		}
 		
 
 
@@ -305,11 +299,12 @@ int main(int argc, char** argv) {
 		outputImage.display("Parallel Kernel Output", true, 0, true);
 		/*----End----*/
 
+
+
+
 		//Equalisation in serial for comparison
-		std::vector<int> serialImageVector = returnRGBMap(inputImage);
-		CImg<unsigned char> serialImage = historamEqualiseSerial(serialImageVector, inputImage);
+		CImg<unsigned char> serialImage = returnRGBMap(inputImage);
 		serialImage.display("Serial Output For Comparison", true, 0, true);
-		/*----End dispay----*/
 
 		/*----Ending program----*/
 		//Program End

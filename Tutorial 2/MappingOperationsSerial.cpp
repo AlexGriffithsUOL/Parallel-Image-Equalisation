@@ -1,4 +1,5 @@
 #include "MappingOperationsSerial.h"
+#include "ReadingWriting.h"
 #include "ConversionSerial.h"
 #pragma once
 
@@ -57,7 +58,7 @@ std::map<int, int> createRGBMap(std::map<int, float> assignedMap) {
 	return newMap;
 }
 
-std::vector<int> returnRGBMap(CImg<unsigned char> inputImage) {
+CImg<unsigned char>returnRGBMap(CImg<unsigned char> inputImage) {
 	int totalSize = inputImage.width() * inputImage.height() * inputImage.spectrum();
 	std::map<int, int> newMap;
 	//Vectorise data
@@ -75,9 +76,11 @@ std::vector<int> returnRGBMap(CImg<unsigned char> inputImage) {
 
 	//Turn into corresponding RGB values
 	newMap = createRGBMap(floatMap);
-
 	std::vector<int>tempArr = vectoriseData(newMap);
-	return tempArr;
+
+	CImg<unsigned char> newImg = historamEqualiseSerial(tempArr, inputImage);
+	
+	return newImg;
 }
 
 
