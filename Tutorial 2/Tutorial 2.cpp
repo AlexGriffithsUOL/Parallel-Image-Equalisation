@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
 	int deviceID = 0; //Default device for my computer, can be changed with arguments below
 
-	string imageFilename = "test_large.pgm";
+	string imageFilename = "test_large.ppm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platformID = atoi(argv[++i]); }
@@ -51,11 +51,8 @@ int main(int argc, char** argv) {
 		//Read image in from the filename, can be defined by user above
 		CImg<unsigned int> inputImage(imageFilename.c_str());
 
-		//Colour images are converted to grey
-		inputImage._spectrum = 1;
-
 		//Create the context
-		cl::Context context = GetContext(platformID, deviceID);		
+		cl::Context context = GetContext(platformID, deviceID);
 
 		//Print out the platform and device
 		std::cout << "Running on " << GetPlatformName(platformID) << ", " << GetDeviceName(platformID, deviceID) << std::endl;
@@ -72,8 +69,8 @@ int main(int argc, char** argv) {
 
 		//Create events for profiling
 		cl::Event timingW; //Writing to buffers
-		cl::Event timingE; //Executing kernels
-		cl::Event timingR; //Reading from buffers
+		cl::Event timingE; //Executing kernel
+		cl::Event timingR; //Reading to kernel
 
 
 		//Build and debug kernel code
@@ -101,10 +98,10 @@ int main(int argc, char** argv) {
 		cout << "Max val: " << maximumPO2 << "\n";
 
 		//For loop finds the next highest power of 2 that can be used, allows for 8, 16, etc bit iamges
-		for (int i = 0; i < (maximumPO2+ 1); ++i) { //1 over the max power of 2 to write the correct number of options
+		for (int i = 0; i < (maximumPO2 + 1); ++i) { //1 over the max power of 2 to write the correct number of options
 			cout << i << "| " << (pow(2, i)) << "\n";  //Prints the powers of 2 that can be used
 		}
-		
+
 		//Get the total size of the input image
 		unsigned int totalSize = inputImage.size();
 
@@ -134,7 +131,7 @@ int main(int argc, char** argv) {
 		//Create buffers
 		cl::Buffer inputImageBuffer(context, CL_MEM_READ_ONLY, inputImage.size() * sizeof(unsigned int)); //unsigned int used to handle higher bit images
 		cl::Buffer histogramBuffer(context, CL_MEM_READ_WRITE, (histogram.size()) * sizeof(unsigned int));
-		
+
 		//Writing to buffer
 		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0], NULL, &timingW); //Writes the image into a buffer, calls writing profiler event
 
@@ -152,13 +149,13 @@ int main(int argc, char** argv) {
 
 		//Reading the buffer return
 		queue.enqueueReadBuffer(histogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &histogram.data()[0], NULL, &timingR); //Pointer is used to point to the start of the histogram vector to read data back into
-																																			 //Call reading profiler event
-		//Display profiling times
+		//Call reading profiler event
+//Display profiling times
 		cout << "Histogram created" << "\n"; //Writes to show the the historam has been created
 		printKernelInfo(timingW.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingW.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Writing timing event
-						timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Execution timing event
-						timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Reading timing event
-						"Histogram");
+			timingE.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingE.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Execution timing event
+			timingR.getProfilingInfo<CL_PROFILING_COMMAND_END>() - timingR.getProfilingInfo<CL_PROFILING_COMMAND_START>(), //Reading timing event
+			"Histogram");
 
 		//Show Graph of the image
 		CImg<unsigned int> histogr(histogram.data(), binNumber); //Image of the data created
@@ -174,7 +171,7 @@ int main(int argc, char** argv) {
 
 		//Get user input for the selection of a seperate scan
 		bool input = checkInputType(0, 1); //Function that returns the input after performing error handling
-		
+
 
 
 		/*----Create a cumulative histogram*/
@@ -201,9 +198,9 @@ int main(int argc, char** argv) {
 		}
 		else
 		{
-			
+
 			cout << "Blelloch selected.\n";
-			
+
 			//Setup kernel with appropriate program
 			kernel = cl::Kernel(program, "scan_bl"); //Blelloch scan program
 
@@ -256,7 +253,7 @@ int main(int argc, char** argv) {
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(cumulHist.size()), cl::NullRange, NULL, &timingE); //Gets the range in the devices for the kernels
 
 		//Reading the data back from the buffer
-		queue.enqueueReadBuffer(normalisedHistogramBuffer, CL_TRUE, 0, cumulHist.size()*sizeof(float), &normHist.data()[0], NULL, &timingR); //Reads the output buffer back from the device
+		queue.enqueueReadBuffer(normalisedHistogramBuffer, CL_TRUE, 0, cumulHist.size() * sizeof(float), &normHist.data()[0], NULL, &timingR); //Reads the output buffer back from the device
 
 		//Display profiling times
 		cout << "Histogram normalised" << "\n";
@@ -269,7 +266,7 @@ int main(int argc, char** argv) {
 		CImg<float> normhistogr(normHist.data(), binNumber);
 		normhistogr.display_graph("Normalised Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
-		
+
 
 
 		/*----Create a scaled histogram----*/
@@ -290,7 +287,7 @@ int main(int argc, char** argv) {
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(normHist.size()), cl::NullRange, NULL, &timingE); //Launches the correct number of kernels for the calculations
 
 		//Reading the data back from the buffer
-		queue.enqueueReadBuffer(scaleHistogramBuffer, CL_TRUE, 0, scaleHist.size()*sizeof(unsigned int), &scaleHist.data()[0], NULL, &timingR);  //Reads to the starting pointer of the scaled histogram
+		queue.enqueueReadBuffer(scaleHistogramBuffer, CL_TRUE, 0, scaleHist.size() * sizeof(unsigned int), &scaleHist.data()[0], NULL, &timingR);  //Reads to the starting pointer of the scaled histogram
 
 		//Display profiling times
 		cout << "Histogram scaled" << "\n";
@@ -303,8 +300,8 @@ int main(int argc, char** argv) {
 		CImg<unsigned int> scalehistogr(scaleHist.data(), binNumber);
 		scalehistogr.display_graph("Scaled Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
 		/*----End----*/
-		
-		
+
+
 
 		/*----Contrast  via lookup table----*/
 		//Create vectors to store data
