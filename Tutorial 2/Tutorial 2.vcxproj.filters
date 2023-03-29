@@ -38,6 +38,9 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{07b6a13d-54fb-4fb1-9f73-f281b9b3bb8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Testing Images">
+      <UniqueIdentifier>{8b2e973f-56a7-47e2-a098-b34fc77ca984}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="kernels\my_kernels.cl">

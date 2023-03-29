@@ -1,7 +1,7 @@
 #include "ConversionSerial.h"
 
 using namespace std;
-int HSVtoRGB(float H, float S, float V) {
+int HSVtoRGB(float H, float S, float V) { //Code found online for serial conversion from HSV to RGB
 	if (H > 360 || H < 0 || S>100 || S < 0 || V>100 || V < 0) {
 		cout << "The givem HSV values are not in valid range" << "\n";
 		return -1;
@@ -33,5 +33,6 @@ int HSVtoRGB(float H, float S, float V) {
 	int R = (r + m) * 255;
 	int G = (g + m) * 255;
 	int B = (b + m) * 255;
-	return R;
+	return R; // Only requires one return as the image is supposed to be grey
+	//https://www.codespeedy.com/hsv-to-rgb-in-cpp/ link to the code
 }

@@ -11,9 +11,9 @@
 
 using namespace cimg_library;
 
-void printKernelInfo(unsigned int WT, unsigned int ET, unsigned int RT, string kernelType) {
+void printKernelInfo(unsigned int WT, unsigned int ET, unsigned int RT, string kernelType) { //Takes in the parameters of the times from the kernel profiling and the kernelType to print it
 	cout << "\nDisplaying " << kernelType.c_str() << " Kernel profiling:" << "\n";
-	cout << "	Kernel Writing Time: " << ((float)WT / 1000000) << "ms\n";
+	cout << "	Kernel Writing Time: " << ((float)WT / 1000000) << "ms\n"; //Converts the nanoseconds into milliseconds
 	cout << "	Kernel Execution Time: " << ((float)ET/ 1000000) << "ms\n";
 	cout << "	Kernel Reading Time: " << ((float)RT / 1000000)<< "ms\n";
 	cout << "	Total Kernel Time: " << ((float)(WT + ET + RT) / 1000000) << "ms\n";
