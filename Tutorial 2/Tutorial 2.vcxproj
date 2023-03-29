@@ -191,9 +191,7 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
     <ClCompile Include="ConversionSerial.cpp" />
     <ClCompile Include="KernelLaunch.cpp" />
     <ClCompile Include="MappingOperationsSerial.cpp" />
-    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="ReadingWriting.cpp" />
-    <ClCompile Include="TestingGround.cpp" />
     <ClCompile Include="Tutorial 2.cpp" />
     <ClCompile Include="UserInputHandling.cpp" />
   </ItemGroup>
@@ -216,11 +214,8 @@ xcopy /y "..\images\*" "$(OutDir)"</Command>
   <ItemGroup>
     <ClInclude Include="..\include\CImg.h" />
     <ClInclude Include="..\include\Utils.h" />
-    <ClInclude Include="Constants.h" />
     <ClInclude Include="ConversionSerial.h" />
-    <ClInclude Include="LibraryImport.h" />
     <ClInclude Include="MappingOperationsSerial.h" />
-    <ClInclude Include="Printing.h" />
     <ClInclude Include="ReadingWriting.h" />
     <ClInclude Include="UserInputHandling.h" />
   </ItemGroup>

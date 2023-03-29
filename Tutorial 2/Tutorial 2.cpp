@@ -71,9 +71,9 @@ int main(int argc, char** argv) {
 		cl::Program program(context, sources);
 
 		//Create events for profiling
-		cl::Event timingW;
-		cl::Event timingE;
-		cl::Event timingR;
+		cl::Event timingW; //Writing to buffers
+		cl::Event timingE; //Executing kernels
+		cl::Event timingR; //Reading from buffers
 
 
 		//Build and debug kernel code

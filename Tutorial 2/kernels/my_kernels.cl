@@ -1,45 +1,45 @@
-#define K_NUM_BINS 256
-//Need to pass another variable called binsize
-__kernel void histogramMaker(__global uint* input, __global uint* bins, uint count, local uint* bins_local, uint numBins) {
-	for (uint i = 0; i < numBins; i++) { 
+//Code found: 
+//Intel provided code adapted for variable bin sizes.
+__kernel void histogramMaker(__global uint* input, __global uint* bins, uint count, local uint* bins_local, uint numBins) { //Takes input, bins, data size count, local bins for faster operation, number of bins
+	for (uint i = 0; i < numBins; i++) { //Initialises local bins to 0
 		bins_local[i] = 0;
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE); //Synchronisation
 	
-	for (uint i = 0; i < count; i++) {
-		bins_local[input[i] % numBins]++;  //K num bins swapped for binnumber
+	for (uint i = 0; i < count; i++) { //Increments through data
+		bins_local[input[i] % numBins]++;  //Put data in appropriate bins
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE); //Syncs the kernels again
 	
-	for (uint i = 0; i < numBins; i++) { //Knumbins swap for bin number
-		bins[i] = bins_local[i]; 
+	for (uint i = 0; i < numBins; i++) { 
+		bins[i] = bins_local[i]; //Writes local data back to the global bins
 	}
 
 }
 
 //a very simple histogram implementation
-kernel void hist_simple(global const unsigned int* A, global unsigned int* H, local uint* temp, unsigned int binSize) {
-	int id = get_global_id(0);
-	int lid = get_local_id(0);
-	local uint scratch_1;
-	temp[id] = A[id];
-	scratch_1 = temp[id];
-	unsigned int bin_index = scratch_1/binSize;
-	atomic_inc(&H[bin_index]);
+kernel void hist_simple(global const unsigned int* A, global unsigned int* H, local uint* temp, unsigned int binSize) { //Takes in an input vector (the image) A, a buffer to read (H), a local temp buffer and the bin size
+	int id = get_global_id(0); //Gets the id
+	int lid = get_local_id(0); //Gets the thread id
+	local uint scratch_1; //Local buffer used to create a faster calculation time
+	temp[lid] = A[id]; //Writes global data to local
+	scratch_1 = temp[lid]; //Translates to a local unsigned integer 
+	unsigned int bin_index = scratch_1/binSize; //Calculates the bin
+	atomic_inc(&H[bin_index]); //Atomic incrementations (not as efficient yet somehow the fastest so far)
 }
 
 
 
-kernel void translateByLookup(global uint* A, global const uint* correspondingArr, const uint binSize) {
-	int id = get_global_id(0);
-	float binNumber = (float)(A[id]) / binSize;
-	A[id] = correspondingArr[(unsigned int)binNumber];
+kernel void translateByLookup(global uint* A, global const uint* correspondingArr, const uint binSize) { //Takes in an input vector (A), a lookup table (correspondingArr) and a bin size
+	int id = get_global_id(0); //Gets the id
+	float binNumber = (float)(A[id]) / binSize; //Recasts the pixel to a float to divide
+	A[id] = correspondingArr[(unsigned int)binNumber]; //Casts back to integer to round down so that it can be written to the global vector
 }
 
 
-kernel void normaliseHistogram(__global const unsigned int* A, __global float* B, unsigned int imgSize) {
-	int id = get_global_id(0);
-	B[id] = ((float)A[id] / imgSize);
+kernel void normaliseHistogram(__global const unsigned int* A, __global float* B, unsigned int imgSize) { //Take an input vector (A), a readable buffer (B), and the image size
+	int id = get_global_id(0); //Gets the id
+	B[id] = ((float)A[id] / imgSize); //Recasts to float to 
 }
 
 kernel void normaliseHistogramFaster(__global float* A, local float* B, unsigned int imgSize) {

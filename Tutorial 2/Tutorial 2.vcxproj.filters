@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Tutorial 2.cpp" />
-    <ClCompile Include="TestingGround.cpp" />
     <ClCompile Include="MappingOperationsSerial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -12,7 +11,6 @@
     <ClCompile Include="ReadingWriting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
@@ -41,6 +39,9 @@
     <Filter Include="Testing Images">
       <UniqueIdentifier>{8b2e973f-56a7-47e2-a098-b34fc77ca984}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{b6d60d9e-26c6-46a8-8ef2-a8b8b4a01208}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="kernels\my_kernels.cl">
@@ -50,17 +51,35 @@
       <Filter>kernels</Filter>
     </None>
     <None Include="test.pgm" />
-    <None Include="test_large.ppm" />
-    <None Include="BigSample.pgm" />
-    <None Include="MassiveSample.pgm" />
-    <None Include="m612.pgm" />
-    <None Include="16BitTest.pgm" />
-    <None Include="TEST16.PGM" />
-    <None Include="img0001.pgm" />
-    <None Include="img0010.pgm" />
-    <None Include="16.pgm" />
     <None Include="test_large.pgm" />
     <None Include="test.ppm" />
+    <None Include="TEST16.PGM">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="test_large.ppm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="m612.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="16BitTest.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="16.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="img0001.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="img0010.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="MassiveSample.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
+    <None Include="BigSample.pgm">
+      <Filter>Testing Images</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">
@@ -72,24 +91,19 @@
     <ClInclude Include="MappingOperationsSerial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Printing.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ConversionSerial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ReadingWriting.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LibraryImport.h" />
     <ClInclude Include="UserInputHandling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="HolderForCode.txt" />
+    <Text Include="HolderForCode.txt">
+      <Filter>Misc</Filter>
+    </Text>
   </ItemGroup>
 </Project>
