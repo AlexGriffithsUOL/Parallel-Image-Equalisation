@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
 	int deviceID = 0; //Default device for my computer, can be changed with arguments below
 
-	string imageFilename = "test_large.ppm";
+	string imageFilename = "test.pgm";
 
 	for (int i = 1; i < argc; i++) {
 		if ((strcmp(argv[i], "-p") == 0) && (i < (argc - 1))) { platformID = atoi(argv[++i]); }
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
 
 		//Show Graph of the image
 		CImg<unsigned int> histogr(histogram.data(), binNumber); //Image of the data created
-		histogr.display_graph("Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true); //Histogram graph displayed
+		histogr.display_graph("Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, false); //Histogram graph displayed
 		/*----End----*/
 
 
@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
 
 		//Create buffers
 		cl::Buffer cumulativeHistogramBuffer(context, CL_MEM_READ_WRITE, histogram.size() * sizeof(unsigned int)); //Based off of histogram size for consistancy with bins
-
+		queue.enqueueWriteBuffer(histogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &histogram.data()[0], NULL, &timingW);
 		//Create the correct kernel depending on the selection
 		if (input) //If statement to swap between user input
 		{
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
 
 		//Display cumulative histogram
 		CImg<unsigned int> cumulativeHistogramImage(cumulHist.data(), binNumber);
-		cumulativeHistogramImage.display_graph("Cumulative Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
+		cumulativeHistogramImage.display_graph("Cumulative Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, false);
 		/*----End----*/
 
 
@@ -276,12 +276,16 @@ int main(int argc, char** argv) {
 		//Create buffers
 		cl::Buffer scaleHistogramBuffer(context, CL_MEM_READ_WRITE, normHist.size() * sizeof(unsigned int));
 
+
+		queue.enqueueWriteBuffer(normalisedHistogramBuffer, CL_TRUE, 0, histogram.size() * sizeof(unsigned int), &normHist.data()[0], NULL, &timingW);
+
 		//Setup kernel with appropriate program
-		kernel = cl::Kernel(program, "scaleTo255"); //Sets the kernel program to scale the histogram
+		kernel = cl::Kernel(program, "scaleHistogram"); //Sets the kernel program to scale the histogram
 
 		//Setting up kernel arguments
 		kernel.setArg(0, normalisedHistogramBuffer);  //Used to alter the data
 		kernel.setArg(1, scaleHistogramBuffer);  //Used to read back the scaled data
+		kernel.setArg(2, 256); //MaximumPO2 is used as it is the maximum bit number, and so it accurately scales to 16 bit
 
 		//Launch correct number of Kernels
 		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(normHist.size()), cl::NullRange, NULL, &timingE); //Launches the correct number of kernels for the calculations
@@ -298,7 +302,7 @@ int main(int argc, char** argv) {
 
 		//Display scaled histogram
 		CImg<unsigned int> scalehistogr(scaleHist.data(), binNumber);
-		scalehistogr.display_graph("Scaled Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, true);
+		scalehistogr.display_graph("Scaled Histogram", 3, 1, "Bin number", 0, 0, "Number of pixels", 0, 0, false);
 		/*----End----*/
 
 
@@ -306,6 +310,9 @@ int main(int argc, char** argv) {
 		/*----Contrast  via lookup table----*/
 		//Create vectors to store data
 		vector<unsigned int> outputImageVector(inputImage.size()); //Vector created to store image
+
+		//
+		queue.enqueueWriteBuffer(inputImageBuffer, CL_TRUE, 0, inputImage.size() * sizeof(unsigned int), &inputImage.data()[0], NULL, &timingW);
 
 		//Setup kernel with appropriate program
 		kernel = cl::Kernel(program, "translateByLookup"); //Sets the kernel program to translate it from a lookup table
@@ -331,7 +338,7 @@ int main(int argc, char** argv) {
 
 		//Display final parallel result
 		CImg<unsigned int> outputImage(outputImageVector.data(), inputImage.width(), inputImage.height(), inputImage.depth(), 1); //Image created from the data
-		outputImage.display("Parallel Kernel Output", false, 0, true); //Displays final parallel image
+		outputImage.display("Parallel Kernel Output", false, 0, false); //Displays final parallel image
 		/*----End----*/
 
 

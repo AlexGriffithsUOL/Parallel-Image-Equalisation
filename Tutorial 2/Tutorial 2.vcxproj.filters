@@ -15,7 +15,6 @@
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="Printing.cpp" />
-    <ClCompile Include="Printing.cpp" />
     <ClCompile Include="KernelLaunch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -65,9 +64,6 @@
     <None Include="16BitTest.pgm">
       <Filter>Testing Images</Filter>
     </None>
-    <None Include="16.pgm">
-      <Filter>Testing Images</Filter>
-    </None>
     <None Include="img0001.pgm">
       <Filter>Testing Images</Filter>
     </None>
@@ -80,6 +76,7 @@
     <None Include="BigSample.pgm">
       <Filter>Testing Images</Filter>
     </None>
+    <None Include="16.pgm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Utils.h">

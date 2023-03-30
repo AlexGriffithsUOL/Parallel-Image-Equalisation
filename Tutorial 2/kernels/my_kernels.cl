@@ -17,15 +17,15 @@ kernel void translateByLookup(global uint* A, global const uint* correspondingAr
 }
 
 //Normalisation
-kernel void normaliseHistogram(__global const unsigned int* A, __global float* B, unsigned int imgSize) { //Take an input vector (A), a readable buffer (B), and the image size
+kernel void normaliseHistogram(__global const unsigned int* A, __global float* B, const unsigned int imgSize) { //Take an input vector (A), a readable buffer (B), and the image size
 	int id = get_global_id(0); //Gets the id
 	B[id] = ((float)A[id] / imgSize); //Recasts to float to 
 }
 
 //Scaling
-kernel void scaleTo255(__global float* A, __global unsigned int* B) { //Takes an input vector (A) and a reading vector (B)
+kernel void scaleHistogram(__global const float* A, __global unsigned int* B, const uint bitNumber) { //Takes an input vector (A) and a reading vector (B)
 	int id = get_global_id(0); //Gets id
-	B[id] = (unsigned int)(A[id] * 255); //Recasts A after scaling to round it down and to handle 16-bit
+	B[id] = (unsigned int)(A[id] * bitNumber); //Recasts A after scaling to round it down and to handle 16-bit
 }
 
 //Hillis-Steele scan (double buffered)
